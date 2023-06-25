@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 	"github.com/peterldowns/pgmigrate/internal/sessionlock"
-	"github.com/peterldowns/pgmigrate/logging"
 )
 
 const (
@@ -42,7 +42,7 @@ type Migrator struct {
 	//
 	// [NewMigrator] defaults it to `nil`, which will prevent any messages from
 	// being logged.
-	Logger logging.Logger
+	Logger Logger
 	// TableName is the table that this migrator should use to keep track of
 	// applied migrations.
 	//
@@ -122,7 +122,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *sql.DB) ([]VerificationError
 		}
 		m.info(ctx, fmt.Sprintf("planning to apply %d migrations", len(plan)))
 		for i, migration := range plan {
-			m.debug(ctx, fmt.Sprintf("%d", i), logging.Field{Key: "migration_id", Value: migration.ID})
+			m.debug(ctx, fmt.Sprintf("%d", i), LogField{Key: "migration_id", Value: migration.ID})
 		}
 		for _, migration := range plan {
 			err = m.applyMigration(ctx, conn, migration)
@@ -137,7 +137,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *sql.DB) ([]VerificationError
 }
 
 func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error {
-	m.info(ctx, "ensuring migrations table exists", logging.Field{Key: "table_name", Value: m.TableName})
+	m.info(ctx, "ensuring migrations table exists", LogField{Key: "table_name", Value: m.TableName})
 	query := fmt.Sprintf(`
 				CREATE TABLE IF NOT EXISTS %s (
 					id TEXT PRIMARY KEY,
@@ -145,7 +145,7 @@ func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error
 					execution_time_in_millis BIGINT NOT NULL,
 					applied_at TIMESTAMPTZ NOT NULL
 				)
-			`, quoteIdentifier(m.TableName))
+			`, pgtools.QuoteIdentifier(m.TableName))
 	_, err := db.ExecContext(ctx, query)
 	return err
 }
@@ -156,7 +156,7 @@ func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, e
 					SELECT FROM pg_tables
 					WHERE tablename = %s
 				);
-			`, quoteLiteral(m.TableName))
+			`, pgtools.QuoteLiteral(m.TableName))
 	var exists bool
 	err := db.QueryRowContext(ctx, query).Scan(&exists)
 	if err != nil {
@@ -197,7 +197,7 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s ORDER BY id ASC
-	`, quoteIdentifier(m.TableName))
+	`, pgtools.QuoteIdentifier(m.TableName))
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 // TODO: multierr here
 func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Migration) error {
 	startedAt := time.Now().UTC()
-	fields := []logging.Field{
+	fields := []LogField{
 		{Key: "migration_id", Value: migration.ID},
 		{Key: "migration_checksum", Value: migration.MD5()},
 		{Key: "started_at", Value: startedAt},
@@ -246,13 +246,13 @@ func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Mi
 	finishedAt := time.Now().UTC()
 	executionTimeMs := finishedAt.Sub(startedAt).Milliseconds()
 	fields = append(fields,
-		logging.Field{Key: "execution_time_ms", Value: executionTimeMs},
-		logging.Field{Key: "finished_at", Value: finishedAt},
+		LogField{Key: "execution_time_ms", Value: executionTimeMs},
+		LogField{Key: "finished_at", Value: finishedAt},
 	)
 	if err != nil {
 		msg := "failed to apply migration"
-		for key, val := range pgErrorData(err) {
-			fields = append(fields, logging.Field{Key: key, Value: val})
+		for key, val := range pgtools.ErrorData(err) {
+			fields = append(fields, LogField{Key: key, Value: val})
 		}
 		m.error(ctx, err, msg, fields...)
 		return fmt.Errorf("%s: %w", msg, err)
@@ -269,7 +269,7 @@ func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Mi
 		( id, checksum, execution_time_in_millis, applied_at )
 		VALUES
 		( $1, $2, $3, $4 )`,
-		quoteIdentifier(m.TableName),
+		pgtools.QuoteIdentifier(m.TableName),
 	)
 	_, err = tx.ExecContext(ctx, query, applied.ID, applied.MD5(), applied.ExecutionTimeInMillis, applied.AppliedAt)
 	if err != nil {
@@ -319,10 +319,10 @@ func (m *Migrator) Verify(ctx context.Context, db Executor) ([]VerificationError
 			verrs = append(verrs, VerificationError{
 				Message: "found applied migration with a different checksum",
 				Fields: map[string]any{
-					"migration_id":                   appliedMigration.ID,
-					"migration_applied_at":           appliedMigration.AppliedAt,
-					"checksum_of_previously_applied": appliedMigration.Checksum,
-					"checksum_of_current_calculated": md5,
+					"migration_id":               appliedMigration.ID,
+					"migration_applied_at":       appliedMigration.AppliedAt,
+					"migration_checksum_from_db": appliedMigration.Checksum,
+					"calculated_checksum":        md5,
 				},
 			})
 		}
@@ -330,33 +330,33 @@ func (m *Migrator) Verify(ctx context.Context, db Executor) ([]VerificationError
 	return verrs, nil
 }
 
-func (m *Migrator) log(ctx context.Context, level logging.Level, msg string, args ...logging.Field) {
+func (m *Migrator) log(ctx context.Context, level LogLevel, msg string, args ...LogField) {
 	if m.Logger != nil {
-		if hl, ok := m.Logger.(logging.Helper); ok {
+		if hl, ok := m.Logger.(Helper); ok {
 			hl.Helper()
 		}
 		m.Logger.Log(ctx, level, msg, args...)
 	}
 }
 
-func (m *Migrator) info(ctx context.Context, msg string, args ...logging.Field) {
-	if logger, ok := m.Logger.(logging.Helper); ok {
+func (m *Migrator) info(ctx context.Context, msg string, args ...LogField) {
+	if logger, ok := m.Logger.(Helper); ok {
 		logger.Helper()
 	}
-	m.log(ctx, logging.LevelInfo, msg, args...)
+	m.log(ctx, LogLevelInfo, msg, args...)
 }
 
-func (m *Migrator) debug(ctx context.Context, msg string, args ...logging.Field) {
-	if logger, ok := m.Logger.(logging.Helper); ok {
+func (m *Migrator) debug(ctx context.Context, msg string, args ...LogField) {
+	if logger, ok := m.Logger.(Helper); ok {
 		logger.Helper()
 	}
-	m.log(ctx, logging.LevelDebug, msg, args...)
+	m.log(ctx, LogLevelDebug, msg, args...)
 }
 
-func (m *Migrator) error(ctx context.Context, err error, msg string, args ...logging.Field) {
-	args = append(args, logging.Field{Key: "error", Value: err})
-	if logger, ok := m.Logger.(logging.Helper); ok {
+func (m *Migrator) error(ctx context.Context, err error, msg string, args ...LogField) {
+	args = append(args, LogField{Key: "error", Value: err})
+	if logger, ok := m.Logger.(Helper); ok {
 		logger.Helper()
 	}
-	m.log(ctx, logging.LevelError, msg, args...)
+	m.log(ctx, LogLevelError, msg, args...)
 }

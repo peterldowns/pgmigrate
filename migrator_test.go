@@ -12,13 +12,12 @@ import (
 	"github.com/peterldowns/pgmigrate"
 
 	"github.com/peterldowns/pgmigrate/internal/withdb"
-	"github.com/peterldowns/pgmigrate/logging"
 )
 
 func TestApplyNoMigrationsSucceeds(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		migrations := []pgmigrate.Migration{}
 		migrator := pgmigrate.NewMigrator(migrations)
@@ -34,7 +33,7 @@ func TestApplyNoMigrationsSucceeds(t *testing.T) {
 func TestApplyOneMigrationSucceeds(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		migrations := []pgmigrate.Migration{
 			{
@@ -61,7 +60,7 @@ func TestApplyOneMigrationSucceeds(t *testing.T) {
 func TestApplySameMigrationTwiceSucceeds(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		m := pgmigrate.Migration{
 			ID:  "0001_initial",
@@ -98,7 +97,7 @@ func TestApplySameMigrationTwiceSucceeds(t *testing.T) {
 func TestApplyMultipleSucceedsInCorrectOrder(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		migrations := []pgmigrate.Migration{
 			{ // Depends on 0003_houses
@@ -146,7 +145,7 @@ func TestApplyMultipleSucceedsInCorrectOrder(t *testing.T) {
 func TestApplyFailsWithConflictingIDs(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		m1 := pgmigrate.Migration{
 			ID:  "0001_initial",
@@ -182,7 +181,7 @@ func TestApplyFailsWithConflictingIDs(t *testing.T) {
 func TestApplyFailsWithInvalidSQL(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		m1 := pgmigrate.Migration{
 			ID:  "0001_initial",
@@ -211,7 +210,7 @@ func TestApplyFailsWithInvalidSQL(t *testing.T) {
 func TestVerifyMD5Mismatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		m1 := pgmigrate.Migration{
 			ID:  "0001_initial",
@@ -241,8 +240,8 @@ func TestVerifyMD5Mismatch(t *testing.T) {
 		check.Equal(t, len(verrs), 1)
 		verr := verrs[0]
 		check.Equal(t, verr.Message, "found applied migration with a different checksum")
-		check.Equal(t, m1modified.MD5(), verr.Fields["checksum_of_current_calculated"].(string))
-		check.Equal(t, m1.MD5(), verr.Fields["checksum_of_previously_applied"].(string))
+		check.Equal(t, m1modified.MD5(), verr.Fields["calculated_checksum"].(string))
+		check.Equal(t, m1.MD5(), verr.Fields["migration_checksum_from_db"].(string))
 		return nil
 	})
 	assert.Nil(t, err)
@@ -251,7 +250,7 @@ func TestVerifyMD5Mismatch(t *testing.T) {
 func TestVerifyMissingMigration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		m1 := pgmigrate.Migration{
 			ID:  "0001_initial",
@@ -287,7 +286,7 @@ func TestVerifyMissingMigration(t *testing.T) {
 func TestAppliedAndPlanWithoutMigrationsTable(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	logger := logging.NewTestLogger(t)
+	logger := pgmigrate.NewTestLogger(t)
 	// Starting from an empty database, Applied() and Plan() should work without
 	// issues and act as if no migrations had previously been applied.
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {

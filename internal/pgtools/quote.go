@@ -1,4 +1,4 @@
-package pgmigrate
+package pgtools
 
 import "strings"
 
@@ -37,7 +37,7 @@ import "strings"
 // Any single quotes in name will be escaped. Any backslashes (i.e. "\") will be
 // replaced by two backslashes (i.e. "\\") and the C-style escape identifier
 // that PostgreSQL provides ('E') will be prepended to the string.
-func quoteLiteral(literal string) string {
+func QuoteLiteral(literal string) string {
 	// This follows the PostgreSQL internal algorithm for handling quoted literals
 	// from libpq, which can be found in the "PQEscapeStringInternal" function,
 	// which is found in the libpq/fe-exec.c source file:
@@ -71,7 +71,7 @@ func quoteLiteral(literal string) string {
 // Any double quotes in name will be escaped.  The quoted identifier will be
 // case sensitive when used in a query.  If the input string contains a zero
 // byte, the result will be truncated immediately before it.
-func quoteIdentifier(name string) string {
+func QuoteIdentifier(name string) string {
 	end := strings.IndexRune(name, 0)
 	if end > -1 {
 		name = name[:end]

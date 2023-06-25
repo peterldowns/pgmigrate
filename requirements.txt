@@ -1,0 +1,11 @@
+sqlbag
+pytest
+pytest-cov
+pytest-clarity
+psycopg2-binary
+flake8
+isort
+migra
+black
+toml
+sqlalchemy

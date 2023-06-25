@@ -17,7 +17,7 @@ build:
 
 # test all packages
 test *args='./... ./cli/...':
-  go test -race $@
+  go test -race -count=1 $@
 
 # lint pgmigrate
 lint *args='./... ./cli/...':

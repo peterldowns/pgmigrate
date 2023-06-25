@@ -27,6 +27,8 @@
             default = pkgs.mkShell {
               buildInputs = [ ];
               packages = with pkgs; [
+                # Python
+                python311Full
                 # Go
                 delve
                 go-outline
@@ -69,9 +71,13 @@
                 export PATH=$(go env GOPATH)/bin:$PATH
                 export CGO_ENABLED=0
 
-                # Make it easy to test while developing; add the golang and nix
-                # build outputs to the path.
+                # Make it easy to test while developing by adding the built binary to
+                # the PATH.
                 export PATH="$workspace_root/bin:$workspace_root/result/bin:$PATH"
+                # For testing purposes
+                export MIGRATIONS='internal/migrations'
+                export DATABASE='postgres://postgres:password@localhost:5433/postgres'
+                export TESTDB='postgres://pd:@localhost:5432/postgres'
               '';
 
               # Need to disable fortify hardening because GCC is not built with -oO,

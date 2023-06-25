@@ -1,4 +1,4 @@
-package pgmigrate
+package pgtools
 
 import "errors"
 
@@ -31,7 +31,7 @@ import "errors"
 // pgError represents an error reported by the PostgreSQL server. See
 // http://www.postgresql.org/docs/11/static/protocol-error-fields.html for
 // detailed field description.
-type pgError struct {
+type Error struct {
 	Severity         string
 	Code             string
 	Message          string
@@ -51,15 +51,15 @@ type pgError struct {
 	Routine          string
 }
 
-func (pe *pgError) Error() string {
+func (pe *Error) Error() string {
 	return pe.Severity + ": " + pe.Message + " (SQLSTATE " + pe.Code + ")"
 }
 
 // If an error comes from postgres, return as much information as possible for
 // logging purposes.
-func pgErrorData(err error) map[string]any {
+func ErrorData(err error) map[string]any {
 	data := make(map[string]any)
-	var perr *pgError
+	var perr *Error
 	if errors.As(err, &perr) {
 		data["pg_code"] = perr.Code
 		if perr.Detail != "" {

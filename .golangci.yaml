@@ -6,13 +6,6 @@ linters-settings:
     enable-all: true
     disable:
       - fieldalignment
-  depguard:
-    list-type: blacklist
-    include-go-root: true
-    include-go-std-lib: true
-    packages:
-      - "github.com/stretchr/testify/require"
-      - "github.com/stretchr/testify/assert"
   exhaustive:
     default-signifies-exhaustive: true
   nolintlint:
@@ -84,6 +77,8 @@ linters-settings:
       - name: unexported-naming
       - name: unexported-return
       - name: unhandled-error
+        arguments:
+          - "fmt.*"
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
@@ -107,6 +102,7 @@ linters:
     - gofmt
     - gofumpt
     - goimports
+    - gomodguard
     - govet
     - ineffassign
     - nolintlint

@@ -1,74 +1,35 @@
-//nolint:gochecknoglobals
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
-	"github.com/spf13/cobra"
-	"golang.org/x/exp/slog"
+	"github.com/fatih/color"
 
-	"github.com/peterldowns/pgmigrate/logging"
+	"github.com/peterldowns/pgmigrate/cli/root"
 )
-
-type LogFormat string
-
-const (
-	LogFormatJSON LogFormat = "json"
-	LogFormatText LogFormat = "text"
-)
-
-var rootFlags struct {
-	LogFormat *string
-}
-
-var root = &cobra.Command{
-	Use:              "pgmigrate",
-	Short:            "run migrations against a postgres database",
-	TraverseChildren: true,
-}
 
 func main() {
-	// Disable the builtin shell-completion script generator command
-	root.CompletionOptions.DisableDefaultCmd = true
-	rootFlags.LogFormat = root.PersistentFlags().String(
-		"log-format",
-		string(LogFormatText),
-		fmt.Sprintf("'%s' (default) or '%s', the log line format", LogFormatText, LogFormatJSON),
-	)
-	if err := root.Execute(); err != nil {
-		panic(err)
+	defer func() {
+		switch t := recover().(type) {
+		case error:
+			onError(fmt.Errorf("panic: %w", t))
+		case string:
+			onError(fmt.Errorf("panic: %s", t))
+		default:
+			if t != nil {
+				onError(fmt.Errorf("panic: %+v", t))
+			}
+		}
+		os.Exit(0)
+	}()
+	if err := root.Command.Execute(); err != nil {
+		onError(err)
 	}
 }
 
-func newLogger() (*slog.Logger, logging.Logger) {
-	var logger *slog.Logger
-	switch *rootFlags.LogFormat {
-	case string(LogFormatText):
-		logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
-	case string(LogFormatJSON):
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	default:
-		panic(fmt.Errorf("unknown log format: %s", *rootFlags.LogFormat))
-	}
-	return logger, adaptedLogger{logger}
-}
-
-type adaptedLogger struct {
-	*slog.Logger
-}
-
-func (l adaptedLogger) Log(ctx context.Context, level logging.Level, msg string, fields ...logging.Field) {
-	slogLevel := map[logging.Level]slog.Level{
-		logging.LevelDebug: slog.LevelDebug,
-		logging.LevelInfo:  slog.LevelInfo,
-		logging.LevelError: slog.LevelError,
-	}[level]
-	args := make([]any, 0, len(fields))
-	for _, field := range fields {
-		args = append(args, slog.Any(field.Key, field.Value))
-	}
-	l.Logger.Log(ctx, slogLevel, msg, args...)
+func onError(err error) {
+	msg := fmt.Sprintf("error: %s", err)
+	_, _ = fmt.Fprintln(os.Stderr, color.New(color.FgRed, color.Italic).Sprintf(msg))
+	os.Exit(1) //nolint:revive // intentional error handling
 }

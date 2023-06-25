@@ -36,5 +36,17 @@
   "nix.formatterPath": "nixpkgs-fmt",
   "[nix]": {
     "editor.formatOnSave": true
-  }
+  },
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5433,
+      "driver": "PostgreSQL",
+      "name": "testdb",
+      "database": "postgres",
+      "username": "postgres",
+      "password": "password"
+    }
+  ]
 }

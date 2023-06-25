@@ -18,8 +18,11 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "args": [],
-            "program": "go run ./cmd/testdb",
+            "env": {
+                "PGM_DATABASE": "postgres://postgres:password@localhost:5433/postgres"
+            },
+            "args": ["dump", ">", "tmp/dump.sql"],
+            "program": "./cli",
 
         }
     ]

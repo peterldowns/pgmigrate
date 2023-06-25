@@ -2,18 +2,43 @@
 |:-------------------------------- |
 | 🚧 This Is A Work In Progress 🚧 |
 
-- [ ] finish CLI
-- [ ] docker container with /migrations directory
-- [ ] comparisons to other migration frameworks
-- [ ] example of using pgtestdb
-- [ ] 'dump' command for creating `schema.sql`
-- [ ] 'fix' command to deal with verification errors
-  - [ ] other 'op' commands as well, like remove/add/edit a row manually?
-- [ ] migration linting as well?
-  - https://squawkhq.com/
-  - https://github.com/sqlfluff/sqlfluff
-- [ ] discussion of large/long-running migrations, migration ordering
-- [ ] use an errors library that captures stack traces
+- [ ] Library
+  - [ ] Include comments on all objects
+  - [ ] Generally clean up the code
+  - [ ] Allow applying schema file instead of migrations
+  - [ ] Tests that don't depend on global schema state
+  - [ ] Improve error handling
+    - no panics anywhere
+    - wrap errors with constant messages
+    - use an error library that includes stack traces
+  - [ ] Improve query performance
+  - [ ] Make queries consistent in formatting + abstractions
+  - [ ] Use appropriate string building techniques
+  - [ ] Give loud, repeated credit to djrobstep/schemainspect for the queries that I used as reference
+- [ ] CLI
+  - [ ] read in config from a file
+  - [ ] 'dump' command for creating `schema.sql`
+  - [ ] 'squash' command for generating a squash migration
+  - [ ] 'fix' command to resolve verification errors
+  - [ ] 'op' commands for manually editing the migrations table
+    - create, read, update, delete
+- [ ] Ops
+  - [ ] docker container
+  - [ ] cli versioning and releases
+  - [ ] recreate the github repository
+- [ ] Docs
+  - [ ] comparisons to other migration frameworks
+  - [ ] example of using pgtestdb
+  - [ ] discussion of large/long-running migrations, migration ordering
+- [ ] Wishlist
+  - [ ] make `*Result` diffable, allow generating migration from current state of database.
+    - docs should say for now, just use [https://github.com/djrobstep/migra](https://github.com/djrobstep/migra)
+  - [ ] some kind of linting
+    - serial vs. identity
+    - pks / fks with indexes
+    - uppercase / mixed case
+    - https://squawkhq.com/
+    - https://github.com/sqlfluff/sqlfluff
 
 # 🐽 pgmigrate
 

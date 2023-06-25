@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"io/fs"
 	"strings"
-
-	"github.com/peterldowns/pgmigrate/logging"
 )
 
 // Migrate will apply any previously applied migrations. It stores metadata in the
@@ -57,7 +55,7 @@ import (
 // migrations table.
 //
 // Finally, the advisory lock is released.
-func Migrate(ctx context.Context, db *sql.DB, dir fs.FS, logger logging.Logger) ([]VerificationError, error) {
+func Migrate(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]VerificationError, error) {
 	migrations, err := Load(dir)
 	if err != nil {
 		return nil, err
@@ -67,7 +65,7 @@ func Migrate(ctx context.Context, db *sql.DB, dir fs.FS, logger logging.Logger) 
 	return migrator.Migrate(ctx, db)
 }
 
-func Verify(ctx context.Context, db *sql.DB, dir fs.FS, logger logging.Logger) ([]VerificationError, error) {
+func Verify(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]VerificationError, error) {
 	migrations, err := Load(dir)
 	if err != nil {
 		return nil, err
@@ -77,7 +75,7 @@ func Verify(ctx context.Context, db *sql.DB, dir fs.FS, logger logging.Logger) (
 	return migrator.Verify(ctx, db)
 }
 
-func Plan(ctx context.Context, db *sql.DB, dir fs.FS, logger logging.Logger) ([]Migration, error) {
+func Plan(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]Migration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
 		return nil, err
@@ -87,7 +85,7 @@ func Plan(ctx context.Context, db *sql.DB, dir fs.FS, logger logging.Logger) ([]
 	return migrator.Plan(ctx, db)
 }
 
-func Applied(ctx context.Context, db *sql.DB, logger logging.Logger) ([]AppliedMigration, error) {
+func Applied(ctx context.Context, db *sql.DB, logger Logger) ([]AppliedMigration, error) {
 	migrator := NewMigrator(nil)
 	migrator.Logger = logger
 	return migrator.Applied(ctx, db)
