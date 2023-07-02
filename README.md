@@ -11,10 +11,10 @@
     - [ ] use an error library that includes stack traces
 - [ ] CLI
   - some kind of tests!
+  - Flake derivation
+  - Homebrew install instructions
 - [ ] Ops
-  - [ ] docker container
   - [ ] cli versioning and releases
-  - [ ] recreate the github repository
 - [ ] Docs
   - [ ] comparisons to other migration frameworks
   - [ ] example of using pgtestdb
