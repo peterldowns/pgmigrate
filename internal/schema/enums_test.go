@@ -29,10 +29,10 @@ func TestLoadEnumsSucceedsWithoutAnyEnums(t *testing.T) {
 
 func TestLoadEnumResultIsStable(t *testing.T) {
 	t.Parallel()
-	original := sqlStatement(`--sql
+	original := query(`--sql
 create type mood as ENUM ('sad', 'ok', 'happy');
 	`)
-	result := sqlStatement(`--sql
+	result := query(`--sql
 CREATE TYPE public.mood AS ENUM (
 	'sad',
 	'ok',
@@ -45,7 +45,7 @@ CREATE TYPE public.mood AS ENUM (
 
 func TestLoadEnumWithoutValues(t *testing.T) {
 	t.Parallel()
-	original := sqlStatement(`--sql
+	original := query(`--sql
 CREATE TYPE public.no_values AS ENUM (
 );
 	`)

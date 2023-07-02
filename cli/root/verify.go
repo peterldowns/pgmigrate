@@ -11,16 +11,18 @@ import (
 )
 
 var verifyCmd = &cobra.Command{ //nolint:gochecknoglobals
-	Use:   "verify",
-	Short: "Verify that migrations have been applied correctly",
+	Use:     "verify",
+	GroupID: "migrating",
+	Short:   "Verify that migrations have been applied correctly",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database := shared.GetDatabase()
-		migrations := shared.GetMigrations()
+		shared.State.Parse()
+		database := shared.State.Database()
+		migrations := shared.State.Migrations()
 		if err := shared.Validate(database, migrations); err != nil {
 			return err
 		}
 
-		slogger, mlogger := shared.NewLogger()
+		slogger, mlogger := shared.State.Logger()
 		dir := os.DirFS(migrations.Value())
 		db, err := sql.Open("pgx", database.Value())
 		if err != nil {
@@ -41,9 +43,4 @@ var verifyCmd = &cobra.Command{ //nolint:gochecknoglobals
 		}
 		return nil
 	},
-}
-
-//nolint:gochecknoinits
-func init() {
-	Command.AddCommand(verifyCmd)
 }

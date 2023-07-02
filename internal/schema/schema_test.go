@@ -14,39 +14,73 @@ import (
 	"github.com/peterldowns/pgmigrate/internal/withdb"
 )
 
-func sqlStatement(x string) string {
+// query is a helper for writing sql queries that look nice in vscode when using
+// the "Inline SQL for go" extension by @jhnj, which gives syntax highlighting
+// for strings that begin with `--sql`.
+//
+// https://marketplace.visualstudio.com/items?itemName=jhnj.vscode-go-inline-sql
+func query(x string) string {
 	return strings.TrimSpace(strings.TrimPrefix(x, "--sql"))
 }
 
-func getDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("pgx", "postgres://postgres:password@localhost:5433/postgres?sslmode=disable")
-	assert.Nil(t, err)
-	return db
+// dbtest is a helper for creating a new database,
+// running some sql statements, and then running tests against
+// that database.
+func dbtest(t *testing.T, statements string, cb func(*sql.DB) error) {
+	t.Helper()
+	ctx := context.Background()
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.Exec(statements); err != nil {
+			return err
+		}
+		return cb(db)
+	})
+	check.Nil(t, err)
+}
+
+// asMap turns a slice of objects into a map of objects keyed by their
+// SortKey().
+func asMap[T schema.Sortable[string]](collections ...[]T) map[string]T {
+	total := 0
+	for _, obj := range collections {
+		total += len(obj)
+	}
+	out := make(map[string]T, total)
+	for _, collection := range collections {
+		for _, object := range collection {
+			out[object.SortKey()] = object
+		}
+	}
+	return out
 }
 
 func TestParseEmptyDatabase(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
-	db := getDB(t)
-	result, err := schema.Parse(config, db)
-	assert.Nil(t, err)
-	assert.NotEqual(t, nil, result)
-	assert.NotEqual(t, nil, result.Extensions)
-	assert.NotEqual(t, nil, result.Domains)
-	assert.NotEqual(t, nil, result.Enums)
-	assert.NotEqual(t, nil, result.Functions)
-	assert.NotEqual(t, nil, result.Tables)
-	assert.NotEqual(t, nil, result.Views)
-	assert.NotEqual(t, nil, result.Sequences)
-	assert.NotEqual(t, nil, result.Indexes)
-	_ = schema.Dump(result)
+	dbtest(t, "", func(db *sql.DB) error {
+		config := schema.Config{Schema: "public"}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.NotEqual(t, nil, result)
+		check.NotEqual(t, nil, result.Extensions)
+		check.NotEqual(t, nil, result.Domains)
+		check.NotEqual(t, nil, result.Enums)
+		check.NotEqual(t, nil, result.Functions)
+		check.NotEqual(t, nil, result.Tables)
+		check.NotEqual(t, nil, result.Views)
+		check.NotEqual(t, nil, result.Sequences)
+		check.NotEqual(t, nil, result.Indexes)
+		check.Equal(t, "", result.String())
+		return nil
+	})
 }
 
 func TestParseSimpleExample(t *testing.T) {
 	t.Parallel()
 	config := schema.Config{Schema: "public"}
 	ctx := context.Background()
-	original := sqlStatement(`--sql
+	original := query(`--sql
 CREATE DOMAIN public.score AS double precision
 CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 
@@ -54,7 +88,7 @@ CREATE EXTENSION "pgcrypto";
 CREATE EXTENSION "pg_trgm";
 	`)
 
-	expected := sqlStatement(`--sql
+	expected := query(`--sql
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -72,7 +106,7 @@ CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 		if err != nil {
 			return err
 		}
-		check.Equal(t, expected, schema.Dump(result))
+		check.Equal(t, expected, result.String())
 		return nil
 	}))
 	assert.Nil(t, withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
@@ -83,7 +117,7 @@ CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 		if err != nil {
 			return err
 		}
-		check.Equal(t, expected, schema.Dump(result))
+		check.Equal(t, expected, result.String())
 		return nil
 	}))
 }

@@ -37,7 +37,7 @@ func (t CompoundType) SortKey() string {
 func (t CompoundType) DependsOn() []string {
 	deps := t.dependencies
 	for _, col := range t.Columns {
-		deps = append(deps, RefCompoundType(col.Type))
+		deps = append(deps, col.Type)
 	}
 	return deps
 }
@@ -50,7 +50,7 @@ func (t CompoundType) String() string {
 	out := fmt.Sprintf("CREATE TYPE %s AS (\n", identifier(t.Schema, t.Name))
 	colDefs := make([]string, 0, len(t.Columns))
 	for _, col := range t.Columns {
-		colDefs = append(colDefs, fmt.Sprintf("  %s %s", identifiers(col.Name), col.Type))
+		colDefs = append(colDefs, fmt.Sprintf("  %s %s", identifier(col.Name), col.Type))
 	}
 	out += strings.Join(colDefs, ",\n")
 	out += "\n);"
@@ -59,7 +59,7 @@ func (t CompoundType) String() string {
 
 func LoadCompoundTypes(config Config, db *sql.DB) ([]*CompoundType, error) {
 	var types []*CompoundType
-	rows, err := db.Query(typesQuery, config.Schema)
+	rows, err := db.Query(compoundTypesQuery, config.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,9 @@ func LoadCompoundTypes(config Config, db *sql.DB) ([]*CompoundType, error) {
 	return Sort[string](types), nil
 }
 
-var typesQuery = query(`--sql
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+var compoundTypesQuery = query(`--sql
 with
 extensions as (
 	select

@@ -35,16 +35,6 @@ func (e Extension) String() string {
 
 func LoadExtensions(config Config, db *sql.DB) ([]*Extension, error) {
 	var extensions []*Extension
-	// Query based on psql
-	//
-	//  \set ECHO_HIDDEN on
-	//  \dx
-	//
-	// and djrobstep/schemainspect
-	// https://github.com/djrobstep/schemainspect/blob/master/schemainspect/pg/sql/extensions.sql
-	//
-	// and pg_dump getExtensions
-	// https://github.com/postgres/postgres/blob/9a2dbc614e6e47da3c49daacec106da32eba9467/src/bin/pg_dump/pg_dump.c#L5306
 	rows, err := db.Query(extensionsQuery, config.Schema)
 	if err != nil {
 		return nil, err
@@ -65,6 +55,10 @@ func LoadExtensions(config Config, db *sql.DB) ([]*Extension, error) {
 	return Sort[string](extensions), nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\dx' with '\set ECHO_HIDDEN on'
+// - pg_dump getExtensions https://github.com/postgres/postgres/blob/9a2dbc614e6e47da3c49daacec106da32eba9467/src/bin/pg_dump/pg_dump.c#L5306
 var extensionsQuery = query(`--sql
 SELECT
 	e.oid as "oid"

@@ -16,11 +16,11 @@ func TestIdentifiersDoesntQuoteLowered(t *testing.T) {
 		"∆_unicode",
 	}
 	for _, tc := range cases {
-		check.Equal(t, tc, identifiers(tc))
+		check.Equal(t, tc, identifier(tc))
 	}
 }
 
 func TestIdentifiersQuotesMixedCase(t *testing.T) {
 	t.Parallel()
-	check.Equal(t, `public."hello_WORLD"`, identifiers("public", `hello_WORLD`))
+	check.Equal(t, `public."hello_WORLD"`, identifier("public", `hello_WORLD`))
 }

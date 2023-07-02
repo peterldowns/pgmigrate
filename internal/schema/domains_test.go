@@ -30,10 +30,10 @@ func TestLoadDomainsSucceedsWithoutAnyDomains(t *testing.T) {
 
 func TestLoadDomainResultIsStable(t *testing.T) {
 	t.Parallel()
-	original := sqlStatement(`--sql
+	original := query(`--sql
 create domain score double precision check (value >= 0 and value <= 100);
 	`)
-	result := sqlStatement(`--sql
+	result := query(`--sql
 CREATE DOMAIN public.score AS double precision
 CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 	`)
@@ -45,7 +45,7 @@ CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 
 func TestLoadDomainWithAllOptions(t *testing.T) {
 	t.Parallel()
-	definition := sqlStatement(`--sql
+	definition := query(`--sql
 CREATE DOMAIN public."US_Postal_Code" AS text
 COLLATE "en_US"
 DEFAULT 'missing'::text
@@ -60,26 +60,14 @@ func TestDependentDomains(t *testing.T) {
 	ctx := context.Background()
 	config := schema.Config{
 		Schema: "public",
-		Dependencies: []schema.ConfigDependency{
-			{
-				Name:      "ddd",
-				DependsOn: []string{"zzz"},
-			},
-			{
-				Name:      "ccc",
-				DependsOn: []string{"zzz"},
-			},
-			{
-				Name:      "aaa",
-				DependsOn: []string{"ccc"},
-			},
-			{
-				Name:      "qqq",
-				DependsOn: []string{"vvv"},
-			},
+		Dependencies: map[string][]string{
+			"ddd": {"zzz"},
+			"ccc": {"zzz"},
+			"aaa": {"ccc"},
+			"qqq": {"vvv"},
 		},
 	}
-	definition := sqlStatement(`--sql
+	definition := query(`--sql
 CREATE DOMAIN public.zzz AS text DEFAULT 'zzz'::text;
 CREATE DOMAIN public.vvv AS text;
 CREATE DOMAIN public.ttt AS text;
@@ -89,7 +77,7 @@ CREATE DOMAIN public.ccc AS zzz DEFAULT 'ccc'::text;
 CREATE DOMAIN public.aaa AS ccc CHECK (value <> 'garbage'::text) NOT NULL;
 CREATE DOMAIN public.qqq AS vvv DEFAULT 'qqq'::text;
 	`)
-	var result *schema.Result
+	var result *schema.Schema
 	assert.Nil(t, withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		_, err := db.ExecContext(ctx, definition)
 		if err != nil {

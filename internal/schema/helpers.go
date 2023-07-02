@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"fmt"
 	"strings"
 
 	"golang.org/x/exp/constraints"
@@ -9,13 +8,21 @@ import (
 	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
-func identifier(schema, table string) string {
-	return identifiers(schema, table)
+// DBObject is an interface satisifed by [Table], [View], [Enum], etc.
+// and allows for easier interaction during the sorting and printing parts of
+// the code.
+type DBObject interface {
+	SortKey() string
+	String() string
+	AddDependency(string)
+	DependsOn() []string
 }
 
-func identifiers(things ...string) string {
-	out := make([]string, 0, len(things))
-	for _, s := range things {
+// identifier joins the parts of a sql identifier, quoting each part only if
+// necessary (if the part is not lower-case.)
+func identifier(parts ...string) string {
+	out := make([]string, 0, len(parts))
+	for _, s := range parts {
 		lowered := strings.ToLower(s)
 		if lowered == s {
 			out = append(out, s)
@@ -26,10 +33,17 @@ func identifiers(things ...string) string {
 	return strings.Join(out, ".")
 }
 
+// query is a helper for writing sql queries that look nice in vscode when using
+// the "Inline SQL for go" extension by @jhnj, which gives syntax highlighting
+// for strings that begin with `--sql`.
+//
+// https://marketplace.visualstudio.com/items?itemName=jhnj.vscode-go-inline-sql
 func query(x string) string {
 	return strings.TrimSpace(strings.TrimPrefix(x, "--sql"))
 }
 
+// asMap turns a slice of objects into a map of objects keyed by their
+// SortKey().
 func asMap[K constraints.Ordered, T Sortable[K]](collections ...[]T) map[K]T {
 	total := 0
 	for _, obj := range collections {
@@ -42,91 +56,4 @@ func asMap[K constraints.Ordered, T Sortable[K]](collections ...[]T) map[K]T {
 		}
 	}
 	return out
-}
-
-type DBObject interface {
-	Printable
-	Sortable[string]
-	Dependable[string]
-}
-
-type Printable interface {
-	String() string
-}
-type Dependable[K constraints.Ordered] interface {
-	AddDependency(K)
-	DependsOn() []K
-}
-
-func RefExtension(name string) string {
-	return name
-}
-
-func RefDomain(name string) string {
-	return name
-}
-
-func RefCompoundType(name string) string {
-	return name
-}
-
-func RefEnum(name string) string {
-	return name
-}
-
-func RefFunction(name string) string {
-	return name
-}
-
-func RefTable(name string) string {
-	return name
-}
-
-func RefView(name string) string {
-	return name
-}
-
-func RefSequence(name string) string {
-	return name
-}
-
-func RefIndex(name string) string {
-	return name
-}
-
-func RefConstraint(name string) string {
-	return name
-}
-
-func RefTrigger(name string) string {
-	return name
-}
-
-func ParseRef(raw string) (string, error) {
-	parts := strings.SplitN(raw, ":", 2)
-	if len(parts) == 2 {
-		switch parts[0] {
-		case "extension":
-			return RefExtension(parts[1]), nil
-		case "domain":
-			return RefDomain(parts[1]), nil
-		case "type":
-			return RefCompoundType(parts[1]), nil
-		case "enum":
-			return RefEnum(parts[1]), nil
-		case "table":
-			return RefTable(parts[1]), nil
-		case "view":
-			return RefView(parts[1]), nil
-		case "sequence":
-			return RefSequence(parts[1]), nil
-		case "index":
-			return RefIndex(parts[1]), nil
-		case "constraint":
-			return RefConstraint(parts[1]), nil
-		case "trigger":
-			return RefTrigger(parts[1]), nil
-		}
-	}
-	return "", fmt.Errorf("invalid reference: %s", raw)
 }

@@ -40,6 +40,8 @@ func LoadDependencies(config Config, db *sql.DB) ([]*Dependency, error) {
 	return deps, nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
 var dependenciesQuery = query(`--sql
 with
 -- Objects (tables, functions, types, views, etc.) that belong to extensions

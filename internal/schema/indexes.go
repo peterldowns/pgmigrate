@@ -91,6 +91,10 @@ func LoadIndexes(config Config, db *sql.DB) ([]*Index, error) {
 	return Sort[string](indexes), nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\di+ <index>' with '\set ECHO_HIDDEN on'
+// - psql '\di+ <table>' with '\set ECHO_HIDDEN on'
 var indexesQuery = query(`--sql
 with
 -- Objects (tables, functions, types, views, etc.) that belong to extensions

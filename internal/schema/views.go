@@ -3,6 +3,8 @@ package schema
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type View struct {
@@ -10,6 +12,7 @@ type View struct {
 	Schema         string
 	Name           string
 	Definition     string
+	Comment        sql.NullString
 	IsMaterialized bool
 	Columns        []Column
 	Dependencies   []string
@@ -41,6 +44,23 @@ func (v View) String() string {
 	// so this indents the first line by two additional spaces to make things a
 	// little more sane (just barely)
 	def = fmt.Sprintf("%s\n  %s", def, v.Definition)
+
+	if v.Comment.Valid {
+		def = def + "\n\n" + fmt.Sprintf(
+			"COMMENT ON VIEW %s IS %s;",
+			identifier(v.Schema, v.Name),
+			pgtools.QuoteLiteral(v.Comment.String),
+		)
+	}
+	for _, column := range v.Columns {
+		if column.Comment.Valid {
+			def = def + "\n\n" + fmt.Sprintf(
+				"COMMENT ON COLUMN %s IS %s;",
+				identifier(v.Schema, v.Name, column.Name),
+				pgtools.QuoteLiteral(column.Comment.String),
+			)
+		}
+	}
 	return def
 }
 
@@ -60,6 +80,7 @@ func LoadViews(config Config, db *sql.DB) ([]*View, error) {
 			&view.Name,
 			&view.IsMaterialized,
 			&view.Definition,
+			&view.Comment,
 			&column.Number,
 			&column.Name,
 			&column.NotNull,
@@ -82,6 +103,9 @@ func LoadViews(config Config, db *sql.DB) ([]*View, error) {
 	return Sort[string](views), nil
 }
 
+// This query was inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\dv+ <view>' with '\set ECHO_HIDDEN on'
 var viewsQuery = query(`--sql
 with r as (
 	select
@@ -103,6 +127,7 @@ select
 	r.name as "view_name",
 	r.is_materialized as "view_is_materialized",
 	r.definition as "view_definition",
+	obj_description(r.oid) as "view_comment",
 	a.attnum as "column_number",
 	a.attname as "name",
 	a.attnotnull as "not_null",
@@ -114,7 +139,7 @@ select
 	  WHERE c.oid = a.attcollation AND t.oid = a.atttypid AND a.attcollation <> t.typcollation
 	) AS "collation",
 	pg_get_expr(ad.adbin, ad.adrelid) as "default_def",
-	pg_catalog.obj_description(r.oid) as "comment"
+	col_description(r.oid, a.attnum) as "column_comment"
 FROM
 	r
 	left join pg_catalog.pg_attribute a

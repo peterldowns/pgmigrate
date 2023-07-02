@@ -49,12 +49,6 @@ func (d Domain) String() string {
 
 func LoadDomains(config Config, db *sql.DB) ([]*Domain, error) {
 	var domains []*Domain
-	// Query based on psql:
-	//
-	// 	\set ECHO HIDDEN on
-	//  \dD
-	//
-	// and Erwin Brandstetter's answer https://stackoverflow.com/a/68249694/829926
 	rows, err := db.Query(domainsQuery, config.Schema)
 	if err != nil {
 		return nil, err
@@ -77,6 +71,10 @@ func LoadDomains(config Config, db *sql.DB) ([]*Domain, error) {
 	return Sort[string](domains), nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\dD' with '\set ECHO_HIDDEN on'
+// - Erwin Brandstetter's answer https://stackoverflow.com/a/68249694/829926
 var domainsQuery = query(`--sql
 select
 	n.nspname as "schema",

@@ -65,7 +65,9 @@ func LoadFunctions(config Config, db *sql.DB) ([]*Function, error) {
 	return Sort[string](functions), nil
 }
 
-// Based on schemainspect and psql \df+ <function>.
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\df+ <function>' with '\set ECHO_HIDDEN on'
 var functionsQuery = query(`--sql
 with
 extensions as (

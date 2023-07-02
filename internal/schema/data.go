@@ -10,11 +10,11 @@ import (
 )
 
 type Data struct {
-	Schema  string
-	Name    string
-	Columns []string
+	Schema  string   `yaml:"schema"`
+	Name    string   `yaml:"name"`
+	Columns []string `yaml:"columns"`
 	Data    []any
-	OrderBy string
+	OrderBy string `yaml:"orderBy"`
 }
 
 func (d Data) String() string {
@@ -42,15 +42,43 @@ func (d Data) String() string {
 }
 
 func LoadData(config Config, db *sql.DB) ([]*Data, error) {
-	var results []*Data
+	var toLoad []*Data
 	for _, d := range config.Data {
-		out := &Data{
-			Schema:  config.Schema,
-			Name:    d.Name,
-			Columns: d.Columns,
-			OrderBy: d.OrderBy,
-			Data:    []any{},
+		if strings.Contains(d.Name, "%") {
+			rows, err := db.Query(query(`--sql
+select c.relname as name
+from pg_catalog.pg_class c
+where c.relnamespace::regnamespace::text = $1
+and c.relkind in ('r', 't', 'p', 'm', 'v')
+and c.relname like $2;
+			`), config.Schema, d.Name)
+			if err != nil {
+				return nil, err
+			}
+			for rows.Next() {
+				var name string
+				if err := rows.Scan(&name); err != nil {
+					return nil, err
+				}
+				toLoad = append(toLoad, &Data{
+					Schema:  config.Schema,
+					Name:    name,
+					Columns: d.Columns,
+					OrderBy: d.OrderBy,
+					Data:    []any{},
+				})
+			}
+		} else {
+			toLoad = append(toLoad, &Data{
+				Schema:  config.Schema,
+				Name:    d.Name,
+				Columns: d.Columns,
+				OrderBy: d.OrderBy,
+				Data:    []any{},
+			})
 		}
+	}
+	for _, d := range toLoad {
 		cols := strings.Join(d.Columns, ", ")
 		if len(cols) == 0 {
 			cols = "*"
@@ -74,13 +102,11 @@ from %s
 		var columns []string
 		for _, cti := range columnTypeInfo {
 			t := cti.ScanType()
-			// if nullable, _ := cti.Nullable(); nullable {
 			t = reflect.PointerTo(t)
-			// }
 			columnTypes = append(columnTypes, t)
 			columns = append(columns, cti.Name())
 		}
-		out.Columns = columns
+		d.Columns = columns
 
 		for rows.Next() {
 			scans := make([]any, len(columnTypes))
@@ -102,9 +128,8 @@ from %s
 					ifaces[i] = v.Elem().Interface()
 				}
 			}
-			out.Data = append(out.Data, ifaces...)
+			d.Data = append(d.Data, ifaces...)
 		}
-		results = append(results, out)
 	}
-	return results, nil
+	return toLoad, nil
 }

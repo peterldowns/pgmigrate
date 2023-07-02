@@ -65,13 +65,13 @@ func (s Sequence) Followup() *Followup {
 		return &Followup{
 			Name: s.Name,
 			dependencies: []string{
-				RefSequence(s.Name),
-				RefTable(s.TableName.String),
+				s.Name,
+				s.TableName.String,
 			},
 			SQL: fmt.Sprintf(
 				"ALTER SEQUENCE %s OWNED BY %s;",
 				identifier(s.Schema, s.Name),
-				identifiers(s.Schema, s.TableName.String, s.ColumnName.String),
+				identifier(s.Schema, s.TableName.String, s.ColumnName.String),
 			),
 		}
 	}

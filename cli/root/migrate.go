@@ -15,14 +15,16 @@ var migrateCmd = &cobra.Command{ //nolint:gochecknoglobals
 	Use:     "migrate",
 	Aliases: []string{"apply"},
 	Short:   "Apply any previously-unapplied migrations",
+	GroupID: "migrating",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database := shared.GetDatabase()
-		migrations := shared.GetMigrations()
+		shared.State.Parse()
+		database := shared.State.Database()
+		migrations := shared.State.Migrations()
 		if err := shared.Validate(database, migrations); err != nil {
 			return err
 		}
 
-		slogger, mlogger := shared.NewLogger()
+		slogger, mlogger := shared.State.Logger()
 		dir := os.DirFS(migrations.Value())
 		db, err := sql.Open("pgx", database.Value())
 		if err != nil {
@@ -43,9 +45,4 @@ var migrateCmd = &cobra.Command{ //nolint:gochecknoglobals
 		}
 		return nil
 	},
-}
-
-//nolint:gochecknoinits
-func init() {
-	Command.AddCommand(migrateCmd)
 }

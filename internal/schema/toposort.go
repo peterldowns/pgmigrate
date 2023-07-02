@@ -11,33 +11,13 @@ type Sortable[K constraints.Ordered] interface {
 	DependsOn() []K // what they depend on
 }
 
-// Sort a a slice in-place by
-//
-// - DESC depth: nodes are grouped by depth, deepest first
-// - ASC    key: nodes with the same depth are ordered by key, ascending
-//
-// with O(n log n + m) complexity for total number of nodes n and total number
-// of edges m. So for the graph
-//
-//		X
-//	    A -> E
-//		A -> B -> C
-//		A -> B -> D -> E
-//		Y -> Z
-//
-// The result will always be
-//
-//	E, C, D, B, Z, A, X, Y
-//	depth 3: E
-//	depth 2: C, D
-//	depth 1: B, Z
-//	depth 0: A, X, Y
+// Sort a a slice in-place by name, and then return a new slice that is sorted
+// in dependency order. The initial sort makes the dependency-ordered result
+// stable regardless of the initial ordering of the input slice.
 func Sort[K constraints.Ordered, T Sortable[K]](nodes []T) []T {
 	// Prepare the initial state for a depth-first traversal off the graph to
 	// find the max-length path for each node.
 	state := &sortState[K, T]{
-		deps:      make(map[K][]K, len(nodes)),
-		depths:    make(map[K]int, len(nodes)),
 		permanent: make(map[K]void, len(nodes)),
 		temporary: make(map[K]void, len(nodes)),
 		byKey:     make(map[K]T, len(nodes)),
@@ -47,11 +27,10 @@ func Sort[K constraints.Ordered, T Sortable[K]](nodes []T) []T {
 	for _, obj := range nodes {
 		key := obj.SortKey()
 		state.byKey[key] = obj
-		state.depths[key] = 0
 	}
 	// O(n log n) sort by SortKey() ASC
-	// so that no matter the initial ordering, we're iterating
-	// through the DFS nodes in the same order.
+	// so that no matter the initial ordering, the DFS visits the nodes in the
+	// same order.
 	sort.SliceStable(nodes, func(i, j int) bool {
 		return nodes[i].SortKey() < nodes[j].SortKey()
 	})
@@ -60,8 +39,7 @@ func Sort[K constraints.Ordered, T Sortable[K]](nodes []T) []T {
 		visited := 0
 		for _, obj := range nodes {
 			if _, ok := state.permanent[obj.SortKey()]; !ok {
-				depth := state.depths[obj.SortKey()]
-				visit(state, obj, depth)
+				visit(state, obj)
 				visited++
 			}
 		}
@@ -75,19 +53,14 @@ func Sort[K constraints.Ordered, T Sortable[K]](nodes []T) []T {
 type void struct{}
 
 type sortState[K constraints.Ordered, T Sortable[K]] struct {
-	deps      map[K][]K
-	depths    map[K]int
 	permanent map[K]void
 	temporary map[K]void
 	byKey     map[K]T
 	result    []T
 }
 
-func visit[K constraints.Ordered, T Sortable[K]](state *sortState[K, T], node T, depth int) {
+func visit[K constraints.Ordered, T Sortable[K]](state *sortState[K, T], node T) {
 	key := node.SortKey()
-	if state.depths[key] < depth {
-		state.depths[key] = depth
-	}
 	if _, ok := state.permanent[key]; ok {
 		return
 	}
@@ -101,10 +74,9 @@ func visit[K constraints.Ordered, T Sortable[K]](state *sortState[K, T], node T,
 	state.temporary[key] = void{}
 	thisDeps := node.DependsOn()
 	for _, childKey := range thisDeps {
-		// nodes can have dependencies that aren't in the graph,
-		// which we should ignore safely.
+		// Ignore dependencies that aren't in the graph.
 		if childNode, ok := state.byKey[childKey]; ok {
-			visit(state, childNode, depth+1)
+			visit(state, childNode)
 		}
 	}
 	delete(state.temporary, key)

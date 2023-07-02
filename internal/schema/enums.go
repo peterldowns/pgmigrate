@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/lib/pq" // TODO: maybe standardize on pgx instead of lib/pq here? Stupid?
+	"github.com/lib/pq"
 
 	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
@@ -47,16 +47,6 @@ func (e Enum) String() string {
 
 func LoadEnums(config Config, db *sql.DB) ([]*Enum, error) {
 	var enums []*Enum
-	// Query based on psql:
-	//
-	//  \set ECHO_HIDDEN on
-	//  \dT+ some_enum
-	//
-	// and djrobstep/schemainspect
-	// https://github.com/djrobstep/schemainspect/blob/master/schemainspect/pg/sql/enums.sql
-	//
-	// and pg_dump dumpEnumType
-	// https://github.com/postgres/postgres/blob/9a2dbc614e6e47da3c49daacec106da32eba9467/src/bin/pg_dump/pg_dump.c#L10488
 	rows, err := db.Query(enumsQuery, config.Schema)
 	if err != nil {
 		return nil, err
@@ -79,6 +69,10 @@ func LoadEnums(config Config, db *sql.DB) ([]*Enum, error) {
 	return Sort[string](enums), nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\dT+ <enum>' with '\set ECHO_HIDDEN on'
+// - pg_dump dumpEnumType https://github.com/postgres/postgres/blob/9a2dbc614e6e47da3c49daacec106da32eba9467/src/bin/pg_dump/pg_dump.c#L10488
 var enumsQuery = query(`--sql
 SELECT t.oid as "oid",
   n.nspname as "schema",

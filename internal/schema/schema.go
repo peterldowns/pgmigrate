@@ -6,75 +6,13 @@ import (
 	"strings"
 )
 
-// Schema dumping is useful for the following flow:
-//
-// 1. create new migration file
-// 2. generate stuff
-// 3. dump schema to schema.sql to cause merge conflicts for conflicting migrations
-// 4. use config to override/customize generated schema.sql if necessary
-//
-// user-controlled: migrations/
-// automated: schema.sql
-//
-// But once schema parsing/dumping is implemented, could go all the way and implement
-// the rest of migra/skeema. This could change the flow to:
-//
-// 1. update schema.sql file
-// 2. generate migrations from the schema.sql compared to state of migrations/ dir
-// 3. modify generated migration.sql file if necessary
-//
-// accomplishes the same goals, but! interface to editing the database is "the
-// schema file" rather than "the migration file"? Allows for more natural
-// definitions of things. This should probably be the end-goal.
-//
-// The operational flow, regardless, is to run migrations. Over time
-// these migrations can be marked as "squashed" to prevent verification errors
-// and ignore old contents. How to do that?
-//
-// 		migration_row.squashed_by => "schema_as_of_100003.sql"
-//
-// which is just a separate migration, which updates the existing migrations (if
-// they exist?) to have "squashed_by" set to itself. After introduction of a squash
-//
-// - copy schema.sql -> squash.sql
-// - append "update * from pgmigrate_migrations where id in (...) set squashed_by=squash.sql squashed_hash=....
-//		- migration ids from migrate/*.sql
-//		- this brings verification errors into the right state
-// - delete migrate/*.sql
-//
-// planning/applying
-// - replace earliest known instance of squashed_by with the squash
-// - replace all subsequent existences with no-op
-//
-// instead of a "squash" concept, have a "base" concept?
-
-// The goal of `pgmigrate dump --database $ORIGINAL > schema.sql` is for the resulting sql file to be:
-//   - usable: can `psql $NEW -f schema.sql` to create a new database with the same schema.
-//   - diffable: if there are migrations in different PRs/branches that will conflict with each other,
-//       diffing the generated schema.sql files from each branch should result in a merge conflict that
-//       cannot be automatically resolved.
-//   - roundtrippable: dumping `pgmigrate dump --database $NEW > schema.sql` will result in 0 changes.
-//   - customizable: you can include tables to dump values from (for enum tables) and you can explicitly
-//       add dependencies between objects that will be respected during the dump, to work around faulty
-//       dependency detection.
-
-type ConfigDependency struct { // TODO: rename this?
-	Name      string
-	DependsOn []string
-}
-
-type ConfigData struct { // TODO: rename this?
-	Name    string
-	Columns []string
-	OrderBy string
-}
 type Config struct {
-	Schema       string
-	Dependencies []ConfigDependency
-	Data         []Data
+	Schema       string              `yaml:"name"`
+	Dependencies map[string][]string `yaml:"dependencies"`
+	Data         []Data              `yaml:"data"`
 }
 
-type Result struct { // TODO: rename to Schema?
+type Schema struct {
 	// Database objects that can be dumped.
 	Extensions    []*Extension
 	Domains       []*Domain
@@ -90,160 +28,68 @@ type Result struct { // TODO: rename to Schema?
 	// Metadata that isn't explicitly dumped.
 	Config       Config
 	Dependencies []*Dependency
-	Data         []*Data // TODO: better name
+	Data         []*Data
 }
 
-func (r *Result) Sort() {
-	r.Extensions = Sort[string](r.Extensions)
-	r.Domains = Sort[string](r.Domains)
-	r.CompoundTypes = Sort[string](r.CompoundTypes)
-	r.Enums = Sort[string](r.Enums)
-	r.Functions = Sort[string](r.Functions)
-	r.Tables = Sort[string](r.Tables)
-	r.Views = Sort[string](r.Views)
-	r.Sequences = Sort[string](r.Sequences)
-	r.Indexes = Sort[string](r.Indexes)
-	r.Constraints = Sort[string](r.Constraints)
-	r.Triggers = Sort[string](r.Triggers)
-}
-
-func (r *Result) Load(db *sql.DB) error {
-	var err error
-	// Objects
-	if r.Extensions, err = LoadExtensions(r.Config, db); err != nil {
-		return fmt.Errorf("extensions: %w", err)
-	}
-	if r.Domains, err = LoadDomains(r.Config, db); err != nil {
-		return fmt.Errorf("domains: %w", err)
-	}
-	if r.CompoundTypes, err = LoadCompoundTypes(r.Config, db); err != nil {
-		return fmt.Errorf("types: %w", err)
-	}
-	if r.Enums, err = LoadEnums(r.Config, db); err != nil {
-		return fmt.Errorf("enums: %w", err)
-	}
-	if r.Functions, err = LoadFunctions(r.Config, db); err != nil {
-		return fmt.Errorf("functions: %w", err)
-	}
-	if r.Tables, err = LoadTables(r.Config, db); err != nil {
-		return fmt.Errorf("tables: %w", err)
-	}
-	if r.Views, err = LoadViews(r.Config, db); err != nil {
-		return fmt.Errorf("views: %w", err)
-	}
-	if r.Sequences, err = LoadSequences(r.Config, db); err != nil {
-		return fmt.Errorf("sequences: %w", err)
-	}
-	if r.Indexes, err = LoadIndexes(r.Config, db); err != nil {
-		return fmt.Errorf("indexes: %w", err)
-	}
-	if r.Constraints, err = LoadConstraints(r.Config, db); err != nil {
-		return fmt.Errorf("constraints: %w", err)
-	}
-	if r.Triggers, err = LoadTriggers(r.Config, db); err != nil {
-		return fmt.Errorf("triggers: %w", err)
-	}
-	// Meta
-	if r.Dependencies, err = LoadDependencies(r.Config, db); err != nil {
-		return fmt.Errorf("dependencies: %w", err)
-	}
-	if r.Data, err = LoadData(r.Config, db); err != nil {
-		return fmt.Errorf("data: %w", err)
-	}
-	return nil
-}
-
-func (r *Result) ObjectsByName() map[string]DBObject {
-	count := 0
-	count += len(r.Extensions)
-	count += len(r.Domains)
-	count += len(r.CompoundTypes)
-	count += len(r.Enums)
-	count += len(r.Functions)
-	count += len(r.Tables)
-	count += len(r.Views)
-	count += len(r.Sequences)
-	count += len(r.Indexes)
-	count += len(r.Constraints)
-	count += len(r.Triggers)
-	objects := make([]DBObject, 0, count)
-
-	// TODO: stop using asMap here, not necessary
-	for _, obj := range r.Extensions {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Domains {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.CompoundTypes {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Enums {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Functions {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Tables {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Views {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Sequences {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Indexes {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Constraints {
-		objects = append(objects, obj)
-	}
-	for _, obj := range r.Triggers {
-		objects = append(objects, obj)
-	}
-
-	return asMap[string](objects)
-}
-
-func Parse(config Config, db *sql.DB) (*Result, error) { // TODO: rename to New?
-	result := Result{Config: config}
-	if err := result.Load(db); err != nil {
+func Parse(config Config, db *sql.DB) (*Schema, error) {
+	schema := Schema{Config: config}
+	// Load and parse each of the different types of object from the database.
+	if err := schema.Load(db); err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
-	byName := result.ObjectsByName()
-
-	tablesByName := asMap[string](result.Tables)
-	indexesByName := asMap[string](result.Indexes)
-	remIndexes := []*Index{}
-	for _, index := range result.Indexes {
-		if table, ok := tablesByName[RefTable(index.TableName)]; ok {
-			table.Indexes = append(table.Indexes, index)
-		} else {
-			remIndexes = append(remIndexes, index)
+	// Assign dependencies between objects.
+	byName := schema.ObjectsByName()
+	for _, dep := range schema.Dependencies {
+		if obj, ok := byName[dep.Object.Name]; ok {
+			obj.AddDependency(dep.DependsOn.Name)
 		}
 	}
-	result.Indexes = remIndexes
+	for name, deps := range config.Dependencies {
+		obj, ok := byName[name]
+		if !ok {
+			continue
+		}
+		for _, dep := range deps {
+			obj.AddDependency(dep)
+		}
+	}
 
-	remConstraints := []*Constraint{}
-	for _, con := range result.Constraints {
+	// Add indexes to their owning table and remove them from schema.Index.
+	tablesByName := asMap[string](schema.Tables)
+	indexesByName := asMap[string](schema.Indexes)
+	indexes := []*Index{}
+	for _, index := range schema.Indexes {
+		if table, ok := tablesByName[index.TableName]; ok {
+			table.Indexes = append(table.Indexes, index)
+		} else {
+			indexes = append(indexes, index)
+		}
+	}
+	schema.Indexes = indexes
+
+	// Add constraints to their owning table and remove them from
+	// schema.Constraints.
+	constraints := []*Constraint{}
+	for _, con := range schema.Constraints {
 		if con.ForeignTableName == "" {
-			if table, ok := tablesByName[RefTable(con.TableName)]; ok {
+			if table, ok := tablesByName[con.TableName]; ok {
 				table.Constraints = append(table.Constraints, con)
 				continue
 			}
 		}
-		if _, ok := indexesByName[RefIndex(con.Index)]; ok {
+		if _, ok := indexesByName[con.Index]; ok {
 			continue
 		}
-		remConstraints = append(remConstraints, con)
+		constraints = append(constraints, con)
 	}
-	result.Constraints = remConstraints
+	schema.Constraints = constraints
 
-	remSequences := []*Sequence{}
-	for _, seq := range result.Sequences {
+	// Add sequences to their owning table and remove them from
+	// schema.Sequences.
+	sequences := []*Sequence{}
+	for _, seq := range schema.Sequences {
 		if seq.TableName.Valid {
-			if table, ok := tablesByName[RefTable(seq.TableName.String)]; ok {
+			if table, ok := tablesByName[seq.TableName.String]; ok {
 				table.Sequences = append(table.Sequences, seq)
 				if seq.ColumnName.Valid {
 					colName := seq.ColumnName.String
@@ -257,98 +103,244 @@ func Parse(config Config, db *sql.DB) (*Result, error) { // TODO: rename to New?
 				continue
 			}
 		}
-		remSequences = append(remSequences, seq)
+		sequences = append(sequences, seq)
 	}
-	result.Sequences = remSequences
+	schema.Sequences = sequences
 
+	// Add triggers to their owning table and remove them from schema.Triggers.
 	remTriggers := []*Trigger{}
-	for _, trig := range result.Triggers {
+	for _, trig := range schema.Triggers {
 		if table, ok := tablesByName[trig.TableName]; ok {
 			table.Triggers = append(table.Triggers, trig)
 			continue
 		}
 		remTriggers = append(remTriggers, trig)
 	}
-	result.Triggers = remTriggers
+	schema.Triggers = remTriggers
 
-	for _, dep := range result.Dependencies {
-		if obj, ok := byName[dep.Object.Name]; ok {
-			obj.AddDependency(dep.DependsOn.Name)
-		}
-	}
-	for _, dep := range config.Dependencies {
-		leftObj, ok := byName[dep.Name]
-		if !ok {
-			continue
-		}
-		for _, right := range dep.DependsOn {
-			leftObj.AddDependency(right)
-		}
-	}
-
-	for _, tc := range []struct {
-		x string
-		y string
-	}{} {
-		if x, ok := byName[tc.x]; ok {
-			x.AddDependency(tc.y)
-		}
-	}
-
-	result.Sort()
-	return &result, nil
+	schema.Sort()
+	return &schema, nil
 }
 
-func Dump(r *Result) string {
-	// TODO: use a buf / string-builder approach here for, you know,
-	// "efficiency" because that's sooooooooooooooooooooo important.
-	var out string
-	for _, obj := range r.Extensions {
-		out += obj.String() + "\n\n"
+// Sort orders each type of database objects into creation order. Does not
+// perform a global ordering on the different types.
+func (s *Schema) Sort() {
+	s.Extensions = Sort[string](s.Extensions)
+	s.Domains = Sort[string](s.Domains)
+	s.CompoundTypes = Sort[string](s.CompoundTypes)
+	s.Enums = Sort[string](s.Enums)
+	s.Functions = Sort[string](s.Functions)
+	s.Tables = Sort[string](s.Tables)
+	s.Views = Sort[string](s.Views)
+	s.Sequences = Sort[string](s.Sequences)
+	s.Indexes = Sort[string](s.Indexes)
+	s.Constraints = Sort[string](s.Constraints)
+	s.Triggers = Sort[string](s.Triggers)
+}
+
+// Load queries the database and populates the slices of database objects. It
+// does not assign any additional dependencies between the objects.
+func (s *Schema) Load(db *sql.DB) error {
+	var err error
+	if s.Extensions, err = LoadExtensions(s.Config, db); err != nil {
+		return fmt.Errorf("extensions: %w", err)
 	}
-	for _, obj := range r.Domains {
-		out += obj.String() + "\n\n"
+	if s.Domains, err = LoadDomains(s.Config, db); err != nil {
+		return fmt.Errorf("domains: %w", err)
 	}
-	for _, obj := range r.Enums {
-		out += obj.String() + "\n\n"
+	if s.CompoundTypes, err = LoadCompoundTypes(s.Config, db); err != nil {
+		return fmt.Errorf("types: %w", err)
 	}
-	for _, obj := range r.CompoundTypes {
-		out += obj.String() + "\n\n"
+	if s.Enums, err = LoadEnums(s.Config, db); err != nil {
+		return fmt.Errorf("enums: %w", err)
 	}
-	for _, obj := range r.Functions {
-		out += obj.String() + "\n\n"
+	if s.Functions, err = LoadFunctions(s.Config, db); err != nil {
+		return fmt.Errorf("functions: %w", err)
 	}
+	if s.Tables, err = LoadTables(s.Config, db); err != nil {
+		return fmt.Errorf("tables: %w", err)
+	}
+	if s.Views, err = LoadViews(s.Config, db); err != nil {
+		return fmt.Errorf("views: %w", err)
+	}
+	if s.Sequences, err = LoadSequences(s.Config, db); err != nil {
+		return fmt.Errorf("sequences: %w", err)
+	}
+	if s.Indexes, err = LoadIndexes(s.Config, db); err != nil {
+		return fmt.Errorf("indexes: %w", err)
+	}
+	if s.Constraints, err = LoadConstraints(s.Config, db); err != nil {
+		return fmt.Errorf("constraints: %w", err)
+	}
+	if s.Triggers, err = LoadTriggers(s.Config, db); err != nil {
+		return fmt.Errorf("triggers: %w", err)
+	}
+	// Meta
+	if s.Dependencies, err = LoadDependencies(s.Config, db); err != nil {
+		return fmt.Errorf("dependencies: %w", err)
+	}
+	if s.Data, err = LoadData(s.Config, db); err != nil {
+		return fmt.Errorf("data: %w", err)
+	}
+	return nil
+}
+
+// ObjectsByName returns a map of all the database objects represented as the
+// DBObject interface. This representation allows assigning dependencies between
+// them, printing them, and sorting them.
+func (s *Schema) ObjectsByName() map[string]DBObject {
+	count := 0
+	count += len(s.Extensions)
+	count += len(s.Domains)
+	count += len(s.CompoundTypes)
+	count += len(s.Enums)
+	count += len(s.Functions)
+	count += len(s.Tables)
+	count += len(s.Views)
+	count += len(s.Sequences)
+	count += len(s.Indexes)
+	count += len(s.Constraints)
+	count += len(s.Triggers)
+	objects := make([]DBObject, 0, count)
+
+	for _, obj := range s.Extensions {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Domains {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.CompoundTypes {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Enums {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Functions {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Tables {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Views {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Sequences {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Indexes {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Constraints {
+		objects = append(objects, obj)
+	}
+	for _, obj := range s.Triggers {
+		objects = append(objects, obj)
+	}
+
+	return asMap[string](objects)
+}
+
+// String returns the contents of schema file that can be applied with `psql` to
+// create a database with the same schema as the one that is parsed. Objects are
+// grouped when possible, and ordered such that when an object is created all of
+// its dependencies are guaranteed to exist.
+//
+// This schema file is
+//
+//   - usable: can `psql $NEW -f schema.sql` to create a new database with the
+//     same schema.
+//   - diffable: if there are migrations in different PRs/branches that will
+//     conflict with each other, diffing the generated schema.sql files from each
+//     branch should result in a merge conflict that cannot be automatically
+//     resolved.
+//   - roundtrippable: dumping `pgmigrate dump --database $NEW > schema.sql`
+//     will result in 0 changes.
+//   - customizable: you can include tables to dump values from (for enum
+//     tables) and you can explicitly add dependencies between objects that will
+//     be respected during the dump, to work around faulty dependency detection.
+func (s *Schema) String() string {
+	out := strings.Builder{}
+
+	// These objects are always emitted first, and are not re-ordered to allow
+	// dependencies. This means that, for instance, a Domain cannot depend on a
+	// custom Function.
+	//
+	// - Extensions
+	// - Domains
+	// - Enums
+	// - CompoundTypes
+	// - Functions
+	//
+	// The upside is that all the other types of objects don't need to
+	// explicitly say they depend on these.
+	for _, obj := range s.Extensions {
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+	for _, obj := range s.Domains {
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+	for _, obj := range s.Enums {
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+	for _, obj := range s.CompoundTypes {
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+	for _, obj := range s.Functions {
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+
+	// These objects are allowed to depend on each other, and are re-ordered
+	// to allow those dependencies.
+	//
+	// - Sequences
+	// - Tables
+	// - Views
+	// - Indexes
+	// - Constraints
+	// - Triggers
+	//
 	var sortable []DBObject
-	for _, obj := range r.Sequences {
+	for _, obj := range s.Sequences {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	for _, obj := range r.Tables {
+	for _, obj := range s.Tables {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	for _, obj := range r.Views {
+	for _, obj := range s.Views {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	for _, obj := range r.Indexes {
+	for _, obj := range s.Indexes {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	for _, obj := range r.Constraints {
+	for _, obj := range s.Constraints {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	for _, obj := range r.Triggers {
+	for _, obj := range s.Triggers {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
 	sortable = Sort[string](sortable)
 	for _, obj := range sortable {
-		out += obj.String() + "\n\n"
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
 	}
-	for _, data := range r.Data {
-		out += data.String() + "\n\n"
+
+	// Add any data-inserting statements after all other database objects have
+	// been created.
+	for _, obj := range s.Data {
+		out.WriteString(obj.String())
+		out.WriteString("\n\n")
 	}
-	return strings.TrimSpace(out)
+
+	return strings.TrimSpace(out.String())
 }

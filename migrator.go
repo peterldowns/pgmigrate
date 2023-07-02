@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/peterldowns/pgmigrate/internal/multierr"
 	"github.com/peterldowns/pgmigrate/internal/pgtools"
 	"github.com/peterldowns/pgmigrate/internal/sessionlock"
 )
@@ -202,20 +203,28 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	return scanAppliedMigrations(rows)
+}
 
-	applied := []AppliedMigration{}
-	for rows.Next() {
-		migration := AppliedMigration{}
-		err = rows.Scan(&migration.ID, &migration.Checksum, &migration.ExecutionTimeInMillis, &migration.AppliedAt)
-		if err != nil {
-			return nil, err
-		}
-		migration.AppliedAt = migration.AppliedAt.UTC()
-		applied = append(applied, migration)
+func (m *Migrator) inTx(ctx context.Context, db Executor, cb func(tx *sql.Tx) error) (final error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		msg := "tx open"
+		m.error(ctx, err, msg)
+		return fmt.Errorf("%s: %w", msg, err)
 	}
-
-	return applied, rows.Err()
+	defer func() {
+		if final != nil {
+			if err := tx.Rollback(); err != nil {
+				final = multierr.Join(final, fmt.Errorf("tx rollback: %w", err))
+			}
+		} else {
+			if err := tx.Commit(); err != nil {
+				final = multierr.Join(final, fmt.Errorf("tx commit: %w", err))
+			}
+		}
+	}()
+	return cb(tx)
 }
 
 // applyMigration runs a single migration inside a transaction:
@@ -223,7 +232,6 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 // - apply the migration
 // - insert a record marking the migration as applied
 // - COMMIT;
-// TODO: multierr here
 func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Migration) error {
 	startedAt := time.Now().UTC()
 	fields := []LogField{
@@ -231,61 +239,46 @@ func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Mi
 		{Key: "migration_checksum", Value: migration.MD5()},
 		{Key: "started_at", Value: startedAt},
 	}
-	// Open the transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		msg := "failed to open transaction"
-		m.error(ctx, err, msg, fields...)
-		return fmt.Errorf("%s: %w", msg, err)
-	}
-	// Rolling back is a no-op if the transaction was already committed.
-	defer func() { _ = tx.Rollback() }()
-	// Apply the migration
 	m.info(ctx, "applying migration", fields...)
-	_, err = tx.ExecContext(ctx, migration.SQL)
-	finishedAt := time.Now().UTC()
-	executionTimeMs := finishedAt.Sub(startedAt).Milliseconds()
-	fields = append(fields,
-		LogField{Key: "execution_time_ms", Value: executionTimeMs},
-		LogField{Key: "finished_at", Value: finishedAt},
-	)
-	if err != nil {
-		msg := "failed to apply migration"
-		for key, val := range pgtools.ErrorData(err) {
-			fields = append(fields, LogField{Key: key, Value: val})
+	return m.inTx(ctx, db, func(tx *sql.Tx) error {
+		// Run the migration SQL
+		_, err := tx.ExecContext(ctx, migration.SQL)
+		finishedAt := time.Now().UTC()
+		executionTimeMs := finishedAt.Sub(startedAt).Milliseconds()
+		fields = append(fields,
+			LogField{Key: "execution_time_ms", Value: executionTimeMs},
+			LogField{Key: "finished_at", Value: finishedAt},
+		)
+		if err != nil {
+			msg := "failed to apply migration"
+			for key, val := range pgtools.ErrorData(err) {
+				fields = append(fields, LogField{Key: key, Value: val})
+			}
+			m.error(ctx, err, msg, fields...)
+			return fmt.Errorf("%s: %w", msg, err)
 		}
-		m.error(ctx, err, msg, fields...)
-		return fmt.Errorf("%s: %w", msg, err)
-	}
-	m.info(ctx, "migration succeeded", fields...)
-	// Mark the migration as applied
-	applied := AppliedMigration{}
-	applied.ID = migration.ID
-	applied.SQL = migration.SQL
-	applied.ExecutionTimeInMillis = executionTimeMs
-	applied.AppliedAt = startedAt
-	query := fmt.Sprintf(`
-		INSERT INTO %s
-		( id, checksum, execution_time_in_millis, applied_at )
-		VALUES
-		( $1, $2, $3, $4 )`,
-		pgtools.QuoteIdentifier(m.TableName),
-	)
-	_, err = tx.ExecContext(ctx, query, applied.ID, applied.MD5(), applied.ExecutionTimeInMillis, applied.AppliedAt)
-	if err != nil {
-		msg := "failed to mark migration as applied"
-		m.error(ctx, err, msg, fields...)
-		return fmt.Errorf("%s: %w", msg, err)
-	}
-	m.info(ctx, "marked as applied", fields...)
-	// Commit the transaction
-	err = tx.Commit()
-	if err != nil {
-		msg := "failed to commit migration"
-		m.error(ctx, err, msg, fields...)
-		return fmt.Errorf("%s: %w", msg, err)
-	}
-	return nil
+		m.info(ctx, "migration succeeded", fields...)
+		// Mark the migration as applied
+		applied := AppliedMigration{Migration: migration}
+		applied.Checksum = migration.MD5()
+		applied.ExecutionTimeInMillis = executionTimeMs
+		applied.AppliedAt = startedAt
+		query := fmt.Sprintf(`
+			INSERT INTO %s
+			( id, checksum, execution_time_in_millis, applied_at )
+			VALUES
+			( $1, $2, $3, $4 )`,
+			pgtools.QuoteIdentifier(m.TableName),
+		)
+		_, err = tx.ExecContext(ctx, query, applied.ID, applied.Checksum, applied.ExecutionTimeInMillis, applied.AppliedAt)
+		if err != nil {
+			msg := "failed to mark migration as applied"
+			m.error(ctx, err, msg, fields...)
+			return fmt.Errorf("%s: %w", msg, err)
+		}
+		m.info(ctx, "marked as applied", fields...)
+		return nil
+	})
 }
 
 // Verify will detect and return any verification errors.
@@ -359,4 +352,31 @@ func (m *Migrator) error(ctx context.Context, err error, msg string, args ...Log
 		logger.Helper()
 	}
 	m.log(ctx, LogLevelError, msg, args...)
+}
+
+func (m *Migrator) warn(ctx context.Context, msg string, args ...LogField) {
+	if logger, ok := m.Logger.(Helper); ok {
+		logger.Helper()
+	}
+	m.log(ctx, LogLevelWarning, msg, args...)
+}
+
+func scanAppliedMigrations(rows *sql.Rows) ([]AppliedMigration, error) {
+	defer rows.Close()
+	var migrations []AppliedMigration
+	for rows.Next() {
+		migration := AppliedMigration{}
+		err := rows.Scan(
+			&migration.ID,
+			&migration.Checksum,
+			&migration.ExecutionTimeInMillis,
+			&migration.AppliedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		migration.AppliedAt = migration.AppliedAt.UTC()
+		migrations = append(migrations, migration)
+	}
+	return migrations, nil
 }

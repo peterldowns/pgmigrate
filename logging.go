@@ -9,9 +9,10 @@ import "context"
 type LogLevel string
 
 const (
-	LogLevelDebug LogLevel = "debug"
-	LogLevelInfo  LogLevel = "info"
-	LogLevelError LogLevel = "error"
+	LogLevelDebug   LogLevel = "debug"
+	LogLevelInfo    LogLevel = "info"
+	LogLevelError   LogLevel = "error"
+	LogLevelWarning LogLevel = "warning"
 )
 
 // LogField holds a key/value pair for structured logging.

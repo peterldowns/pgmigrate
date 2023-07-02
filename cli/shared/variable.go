@@ -54,38 +54,3 @@ func (s Variable[T]) IsSet() bool {
 func (s Variable[T]) Value() T {
 	return s.value
 }
-
-// type void struct{}
-//
-// func toSet[T comparable](vals []T) map[T]void {
-// 	out := make(map[T]void, len(vals))
-// 	for _, val := range vals {
-// 		out[val] = void{}
-// 	}
-// 	return out
-// }
-// func Required(flags *pflag.FlagSet, names ...string) error {
-// 	missingFlagNames := []string{}
-// 	requiredNames := toSet(names)
-
-// 	flags.VisitAll(func(flag *pflag.Flag) {
-// 		_, isRequired := requiredNames[flag.Name]
-// 		if isRequired && !flag.Changed {
-// 			missingFlagNames = append(missingFlagNames, flag.Name)
-// 		}
-// 	})
-// 	if len(missingFlagNames) > 0 {
-// 		return fmt.Errorf(`required flag(s) "%s" not set`, strings.Join(missingFlagNames, `", "`))
-// 	}
-// 	return nil
-// }
-
-// func GetValue[T comparable](fallback T, opts ...T) (T, bool) {
-// 	var zero T
-// 	for _, opt := range opts {
-// 		if opt != zero {
-// 			return opt, false
-// 		}
-// 	}
-// 	return fallback, true
-// }

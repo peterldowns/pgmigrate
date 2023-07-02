@@ -31,10 +31,10 @@ func (c Constraint) SortKey() string {
 func (c *Constraint) DependsOn() []string {
 	deps := append(c.dependencies, c.TableName) //nolint:gocritic // appendAssign
 	if c.ForeignTableName != "" {
-		deps = append(deps, RefTable(c.ForeignTableName))
+		deps = append(deps, c.ForeignTableName)
 	}
 	if c.Index != "" {
-		deps = append(deps, RefIndex(c.Index))
+		deps = append(deps, c.Index)
 	}
 	return deps
 }
@@ -50,7 +50,7 @@ ADD CONSTRAINT %s
 %s;
 	`),
 		identifier(c.Schema, c.TableName),
-		identifiers(c.Name),
+		identifier(c.Name),
 		c.Definition,
 	)
 }
@@ -85,6 +85,8 @@ func LoadConstraints(config Config, db *sql.DB) ([]*Constraint, error) {
 	return Sort[string](constraints), nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
 var constraintsQuery = query(`--sql
 with
 extensions as (

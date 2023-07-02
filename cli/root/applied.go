@@ -2,6 +2,7 @@ package root
 
 import (
 	"database/sql"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -13,21 +14,25 @@ var appliedCmd = &cobra.Command{ //nolint:gochecknoglobals
 	Use:              "applied",
 	Aliases:          []string{"list"},
 	Short:            "Show all previously-applied migrations",
+	GroupID:          "migrating",
 	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database := shared.GetDatabase()
-		if err := shared.Validate(database); err != nil {
+		shared.State.Parse()
+		migrations := shared.State.Migrations()
+		database := shared.State.Database()
+		if err := shared.Validate(database, migrations); err != nil {
 			return err
 		}
+		dir := os.DirFS(migrations.Value())
 
-		slogger, mlogger := shared.NewLogger()
+		slogger, mlogger := shared.State.Logger()
 		db, err := sql.Open("pgx", database.Value())
 		if err != nil {
 			return err
 		}
 		defer db.Close()
 
-		applied, err := pgmigrate.Applied(cmd.Context(), db, mlogger)
+		applied, err := pgmigrate.Applied(cmd.Context(), db, dir, mlogger)
 		if err != nil {
 			return err
 		}
@@ -40,9 +45,4 @@ var appliedCmd = &cobra.Command{ //nolint:gochecknoglobals
 		}
 		return nil
 	},
-}
-
-//nolint:gochecknoinits
-func init() {
-	Command.AddCommand(appliedCmd)
 }

@@ -3,25 +3,14 @@
 | 🚧 This Is A Work In Progress 🚧 |
 
 - [ ] Library
-  - [ ] Include comments on all objects
+  - [ ] Docstrings on all public methods/functions
+  - [ ] Tests for the schema handling stuff
   - [ ] Generally clean up the code
-  - [ ] Allow applying schema file instead of migrations
-  - [ ] Tests that don't depend on global schema state
   - [ ] Improve error handling
-    - no panics anywhere
-    - wrap errors with constant messages
-    - use an error library that includes stack traces
-  - [ ] Improve query performance
-  - [ ] Make queries consistent in formatting + abstractions
-  - [ ] Use appropriate string building techniques
-  - [ ] Give loud, repeated credit to djrobstep/schemainspect for the queries that I used as reference
+    - [ ] wrap errors with constant messages
+    - [ ] use an error library that includes stack traces
 - [ ] CLI
-  - [ ] read in config from a file
-  - [ ] 'dump' command for creating `schema.sql`
-  - [ ] 'squash' command for generating a squash migration
-  - [ ] 'fix' command to resolve verification errors
-  - [ ] 'op' commands for manually editing the migrations table
-    - create, read, update, delete
+  - some kind of tests!
 - [ ] Ops
   - [ ] docker container
   - [ ] cli versioning and releases
@@ -30,10 +19,12 @@
   - [ ] comparisons to other migration frameworks
   - [ ] example of using pgtestdb
   - [ ] discussion of large/long-running migrations, migration ordering
+  - [ ] how to check the dump for differences in CI
 - [ ] Wishlist
   - [ ] make `*Result` diffable, allow generating migration from current state of database.
     - docs should say for now, just use [https://github.com/djrobstep/migra](https://github.com/djrobstep/migra)
   - [ ] some kind of linting
+    - BEGIN/COMMIT/ROLLBACK
     - serial vs. identity
     - pks / fks with indexes
     - uppercase / mixed case
@@ -42,7 +33,7 @@
 
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.0.1/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.0.2/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 
@@ -282,7 +273,137 @@ TODO
 
 # Acknowledgements
 
-TODO
+I'd like to thank and acknowledge:
 
-- Usman, Jack, and the rest of the Pipe team.
-- All existing migration libraries.
+- All existing migration libraries for inspiration.
+- [djrobstep](https://github.com/djrobstep)'s
+  [schemainspect](https://github.com/djrobstep/schemainspect) and
+  [migra](https://github.com/djrobstep/migra) projects, for the queries used to
+  implement `pgmigrate dump`.
+- The backend team at Pipe for helping test and validate this project's
+  assumptions, utility, and implementation.
+
+# Notes
+
+Schema dumping is useful for the following flow:
+
+1. create new migration file
+2. generate stuff
+3. dump schema to schema.sql to cause merge conflicts for conflicting migrations
+4. use config to override/customize generated schema.sql if necessary
+
+user-controlled: migrations/
+automated: schema.sql
+
+But once schema parsing/dumping is implemented, could go all the way and implement
+the rest of migra/skeema. This could change the flow to:
+
+1. update schema.sql file
+2. generate migrations from the schema.sql compared to state of migrations/ dir
+3. modify generated migration.sql file if necessary
+
+accomplishes the same goals, but! interface to editing the database is "the
+schema file" rather than "the migration file"? Allows for more natural
+definitions of things. This should probably be the end-goal.
+
+The operational flow, regardless, is to run migrations. Over time
+these migrations can be marked as "squashed" to prevent verification errors
+and ignore old contents. How to do that?
+
+		migration_row.squashed_by => "schema_as_of_100003.sql"
+
+which is just a separate migration, which updates the existing migrations (if
+they exist?) to have "squashed_by" set to itself. After introduction of a squash
+
+- copy schema.sql -> squash.sql
+- append "update * from pgmigrate_migrations where id in (...) set squashed_by=squash.sql squashed_hash=....
+	- migration ids from migrate/*.sql
+	- this brings verification errors into the right state
+- delete migrate/*.sql
+
+planning/applying
+- replace earliest known instance of squashed_by with the squash
+- replace all subsequent existences with no-op
+
+instead of a "squash" concept, have a "base" concept?
+
+The goal of `pgmigrate dump --database $ORIGINAL > schema.sql` is for the resulting sql file to be:
+  - usable: can `psql $NEW -f schema.sql` to create a new database with the same schema.
+  - diffable: if there are migrations in different PRs/branches that will conflict with each other,
+      diffing the generated schema.sql files from each branch should result in a merge conflict that
+      cannot be automatically resolved.
+  - roundtrippable: dumping `pgmigrate dump --database $NEW > schema.sql` will result in 0 changes.
+  - customizable: you can include tables to dump values from (for enum tables) and you can explicitly
+      add dependencies between objects that will be respected during the dump, to work around faulty
+      dependency detection.
+
+
+### How to squash your migrations
+
+This process will involve manually updating the migrations table of your
+staging/production databases. Your coworkers will need to recreate their
+development databases or manually update their migration state with the same
+commands used in staging/production. Make sure to coordinate carefully with your
+team and give plenty of heads up beforehand. This should be an infrequent
+procedure.
+
+Start by replacing your migrations with the output of `pgmigrate dump`.  This
+can be done in a pull request just like any other change.
+
+- Apply all current migrations to your dev/local database and verify that they were applied:
+```bash
+export PGM_MIGRATIONS="./migrations"
+pgmigrate apply
+pgmigrate verify
+```
+- Remove all existing migration files:
+```bash
+rm migrations/*.sql
+```
+- Dump the current schema as a new migration:
+```bash
+pgmigrate dump -o migrations/00001_squash_on_2023_07_02.sql
+```
+
+This "squash" migration does the exact same thing as all the migration files
+that it replaced, which is the goal! But before you can deploy and run
+migrations, you will need to manually mark this migration as having already been
+applied. Otherwise, pgmigrate would attempt to apply it, and that almost
+certainly wouldn't work. The commands below use `$PROD` to reference the
+connection string for the database you are manually modifying, but you will need
+to do this on every database for which you manage migrations.
+
+- Double-check that the schema dumped from production is the exact same as the
+squash migration file. If there are any differences in these two files, DO NOT
+continue with the rest of this process. You will need to figure out why your
+production database schema is different than that described by your migrations.
+If necessary, please report a bug or issue on Github if pgmigrate is the reason
+for the difference.
+```bash
+mkdir -p tmp
+pgmigrate --database $PROD dump -o tmp/prod-schema.sql
+# This should result in no differences being printed. If you see any
+# differences, please abort this process.
+diff migrations/00001_squash_on_2023_07_02.sql tmp/prod-schema.sql
+rm tmp/prod-schema.sql
+```
+- Remove the records of all previous migrations having been applied.
+```bash
+# DANGER: Removes all migration records from the database
+pgmigrate --database $PROD ops mark-unapplied --all
+```
+- Mark this migration as having been applied
+```bash
+# DANGER: marks all migrations in the directory (only our squash migration in
+# this case) as having been applied without actually running the migrations.
+pgmigrate --database $PROD ops mark-applied --all
+```
+- Check that the migration plan is empty, the result should show no migrations
+need to be applied.
+```bash
+pgmigrate --database $PROD plan
+```
+- Verify the migrations state, should show no errors or problems.
+```bash
+pgmigrate --database $PROD verify
+```

@@ -61,6 +61,9 @@ func LoadTriggers(config Config, db *sql.DB) ([]*Trigger, error) {
 	return Sort[string](triggers), nil
 }
 
+// This query is inspired heavily by:
+// - djrobstep/schemainspect https://github.com/djrobstep/schemainspect/tree/066262d6fb4668f874925305a0b7dbb3ac866882/schemainspect/pg/sql
+// - psql '\d+ <table>' with '\set ECHO_HIDDEN on'
 var triggersQuery = query(`--sql
 with extensions as (
   select

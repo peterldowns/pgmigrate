@@ -19,9 +19,9 @@
             "request": "launch",
             "mode": "debug",
             "env": {
-                "PGM_DATABASE": "postgres://postgres:password@localhost:5433/postgres"
+                "PGM_CONFIGFILE": "/Users/pd/code/pgmigrate/.pgmigrate.yaml"
             },
-            "args": ["dump", ">", "tmp/dump.sql"],
+            "args": ["dump"],
             "program": "./cli",
 
         }

@@ -3,6 +3,7 @@ package root
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -10,62 +11,48 @@ import (
 	"github.com/peterldowns/pgmigrate/internal/schema"
 )
 
+var DumpFlags struct {
+	File *string
+}
+
 var dumpCmd = &cobra.Command{
-	Use:   "dump",
-	Short: "Dump the current schema",
+	Use:     "dump",
+	Short:   "Dump the current schema",
+	GroupID: "dev",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database := shared.GetDatabase()
+		shared.State.Parse()
+		database := shared.State.Database()
+		if err := shared.Validate(database); err != nil {
+			return err
+		}
 		db, err := sql.Open("pgx", database.Value())
 		if err != nil {
 			return err
 		}
 		defer db.Close()
 
-		config := schema.Config{
-			Schema: "public",
-		}
-		result, err := schema.Parse(config, db)
+		config := shared.State.Config
+		parsed, err := schema.Parse(config.Schema, db)
 		if err != nil {
 			return err
 		}
-		fmt.Println(schema.Dump(result))
-		return err
-	},
-}
+		contents := parsed.String()
 
-func init() {
-	Command.AddCommand(dumpCmd)
-}
-
-var debugCmd = &cobra.Command{
-	Use:   "debug",
-	Short: "debug the current schema",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		database := shared.GetDatabase()
-		db, err := sql.Open("pgx", database.Value())
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-
-		config := schema.Config{
-			Schema: "public",
-		}
-		result, err := schema.Parse(config, db)
-		if err != nil {
-			return err
-		}
-		name := "lists_tradeable_contracts"
-		for _, view := range result.Views {
-			if view.Name == name {
-				fmt.Println(view.DependsOn())
-				fmt.Println(view.String())
+		fout := *DumpFlags.File
+		if fout == "-" || fout == "" {
+			fmt.Println(contents)
+		} else {
+			file, err := os.OpenFile(fout, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
+			if err != nil {
+				return err
 			}
+			defer file.Close()
+			fmt.Fprintln(file, contents)
 		}
-		return err
+		return nil
 	},
 }
 
 func init() {
-	Command.AddCommand(debugCmd)
+	DumpFlags.File = dumpCmd.Flags().StringP("out", "o", "-", "path to write the schema to")
 }

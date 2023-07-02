@@ -79,6 +79,7 @@ linters-settings:
       - name: unhandled-error
         arguments:
           - "fmt.*"
+          - "strings.Builder.WriteString"
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
