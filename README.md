@@ -234,7 +234,7 @@ Unconvinced? What if I pinky promised? OK, let's say you're still worried. Use
 git to guarantee that you never have a problem by turning schema conflicts into
 unmergeable file conflicts:
 
-- Add a `schema.sql` file somewhere in your repo that contains a dump of your database schema.
+- Add a `schema.sql` file somewhere in your repo that contains a dump of your database schema generated with `pgmigrate dump -o schema.sql`
 - Make an easy script for applying migrations and then dumping the resulting schema to `schema.sql` so developers can do it as they work.
 - In CI, run the migrations and use that script to make sure `schema.sql` is up
 to date. If running the script in CI causes any changes to the file, fail, and
@@ -244,101 +244,7 @@ This will mean that `schema.sql` stays up to date as developers write new
 migrations. If two developers write migrations that cause conflicting schema
 updates, they won't be able to merge because it will be a git conflict.
 
-# Library
-
-## Install
-* requires golang 1.18+ because it uses generics. 
-* only depends on stdlib; all dependencies in the go.mod are for tests.
-```bash
-# library
-go get github.com/peterldowns/pgmigrate@latest
-```
-
-## Usage
-TODO
-
-# CLI
-
-## Install
-
-```bash
-go install github.com/peterldowns/pgmigrate/cli@latest
-```
-
-## Usage
-TODO
-
-# FAQ
-TODO
-
-# Acknowledgements
-
-I'd like to thank and acknowledge:
-
-- All existing migration libraries for inspiration.
-- [djrobstep](https://github.com/djrobstep)'s
-  [schemainspect](https://github.com/djrobstep/schemainspect) and
-  [migra](https://github.com/djrobstep/migra) projects, for the queries used to
-  implement `pgmigrate dump`.
-- The backend team at Pipe for helping test and validate this project's
-  assumptions, utility, and implementation.
-
-# Notes
-
-Schema dumping is useful for the following flow:
-
-1. create new migration file
-2. generate stuff
-3. dump schema to schema.sql to cause merge conflicts for conflicting migrations
-4. use config to override/customize generated schema.sql if necessary
-
-user-controlled: migrations/
-automated: schema.sql
-
-But once schema parsing/dumping is implemented, could go all the way and implement
-the rest of migra/skeema. This could change the flow to:
-
-1. update schema.sql file
-2. generate migrations from the schema.sql compared to state of migrations/ dir
-3. modify generated migration.sql file if necessary
-
-accomplishes the same goals, but! interface to editing the database is "the
-schema file" rather than "the migration file"? Allows for more natural
-definitions of things. This should probably be the end-goal.
-
-The operational flow, regardless, is to run migrations. Over time
-these migrations can be marked as "squashed" to prevent verification errors
-and ignore old contents. How to do that?
-
-		migration_row.squashed_by => "schema_as_of_100003.sql"
-
-which is just a separate migration, which updates the existing migrations (if
-they exist?) to have "squashed_by" set to itself. After introduction of a squash
-
-- copy schema.sql -> squash.sql
-- append "update * from pgmigrate_migrations where id in (...) set squashed_by=squash.sql squashed_hash=....
-	- migration ids from migrate/*.sql
-	- this brings verification errors into the right state
-- delete migrate/*.sql
-
-planning/applying
-- replace earliest known instance of squashed_by with the squash
-- replace all subsequent existences with no-op
-
-instead of a "squash" concept, have a "base" concept?
-
-The goal of `pgmigrate dump --database $ORIGINAL > schema.sql` is for the resulting sql file to be:
-  - usable: can `psql $NEW -f schema.sql` to create a new database with the same schema.
-  - diffable: if there are migrations in different PRs/branches that will conflict with each other,
-      diffing the generated schema.sql files from each branch should result in a merge conflict that
-      cannot be automatically resolved.
-  - roundtrippable: dumping `pgmigrate dump --database $NEW > schema.sql` will result in 0 changes.
-  - customizable: you can include tables to dump values from (for enum tables) and you can explicitly
-      add dependencies between objects that will be respected during the dump, to work around faulty
-      dependency detection.
-
-
-### How to squash your migrations
+## How to squash your migrations
 
 This process will involve manually updating the migrations table of your
 staging/production databases. Your coworkers will need to recreate their
@@ -407,3 +313,55 @@ pgmigrate --database $PROD plan
 ```bash
 pgmigrate --database $PROD verify
 ```
+
+
+# Library
+
+## Install
+* requires golang 1.18+ because it uses generics. 
+* only depends on stdlib; all dependencies in the go.mod are for tests.
+```bash
+# library
+go get github.com/peterldowns/pgmigrate@latest
+```
+
+## Usage
+
+# CLI
+
+## Install
+
+```bash
+go install github.com/peterldowns/pgmigrate/cli@latest
+```
+
+## Usage
+
+# FAQ
+
+# Acknowledgements
+
+I'd like to thank and acknowledge:
+
+- All existing migration libraries for inspiration.
+- [djrobstep](https://github.com/djrobstep)'s
+  [schemainspect](https://github.com/djrobstep/schemainspect) and
+  [migra](https://github.com/djrobstep/migra) projects, for the queries used to
+  implement `pgmigrate dump`.
+- The backend team at Pipe for helping test and validate this project's
+  assumptions, utility, and implementation.
+
+# Notes
+
+## `pgmigrate dump`
+The goal of `pgmigrate dump --database $ORIGINAL > schema.sql` is for the resulting sql file to be:
+  - usable: can `psql $NEW -f schema.sql` to create a new database with the same schema.
+  - diffable: if there are migrations in different PRs/branches that will conflict with each other,
+      diffing the generated schema.sql files from each branch should result in a merge conflict that
+      cannot be automatically resolved.
+  - roundtrippable: dumping `pgmigrate dump --database $NEW > schema.sql` will result in 0 changes.
+  - customizable: you can include tables to dump values from (for enum tables) and you can explicitly
+      add dependencies between objects that will be respected during the dump, to work around faulty
+      dependency detection.
+
+

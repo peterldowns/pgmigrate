@@ -52,3 +52,22 @@ update-version version:
   echo $NEW_VERSION > VERSION
   sed -i -e "s/$OLD_VERSION/$NEW_VERSION/g" **/README.md
   sed -i -e "s/pgmigrate $OLD_VERSION/pgmigrate $NEW_VERSION/g" **/go.mod
+
+# builds and pushes tbd-dbtools/migrate, tagged with :latest and :$COMMIT_SHA
+build-docker:
+  #!/usr/bin/env bash
+  COMMIT_SHA=$(git log -1 | head -1 | cut -f 2 -d ' ')
+  VERSION=$(cat ./VERSION)
+  docker buildx build \
+    --platform linux/arm64,linux/amd64 \
+    --label pgmigrate \
+    --tag ghcr.io/peterldowns/pgmigrate:"$COMMIT_SHA" \
+    --tag ghcr.io/peterldowns/pgmigrate:"$VERSION-commit.$COMMIT_SHA" \
+    --tag ghcr.io/peterldowns/pgmigrate:latest \
+    --tag pgmigrate \
+    --cache-from ghcr.io/peterldowns/pgmigrate:latest \
+    --build-arg COMMIT_SHA="$COMMIT_SHA" \
+    --build-arg VERSION="$VERSION" \
+    --file ./Dockerfile \
+    --output type=image,push=false \
+    .
