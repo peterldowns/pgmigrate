@@ -19,7 +19,7 @@ jobs:
       uses: DeterminateSystems/magic-nix-cache-action@v1
     - run: nix flake check
     - name: lint formatting
-      run: >
+      run: |
         nix develop --command nixpkgs-fmt --check *.nix
         if ! git diff-index --quiet HEAD --; then
           echo "nixpkgs-fmt had changes"
