@@ -46,11 +46,13 @@
               # (Yes, that's really how you're expected to do this.)
               # vendorSha256 = pkgs.lib.fakeSha256;
               vendorSha256 = pkgs.lib.fakeSha256;
+              #vendorSha256 = "sha256-9r3XTGzndoVnXwnfcsOD1H6pIRhSyXVk6Tvggeej65A=";
+              GOWORK="off";
               src =
                 let
                   # Set this to `true` in order to show all of the source files
                   # that will be included in the module build.
-                  debug-tracing = false;
+                  debug-tracing = true;
                   source-files = inputs.nix-filter.lib.filter {
                     root = ./cli;
                   };

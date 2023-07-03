@@ -2,6 +2,8 @@ module github.com/peterldowns/pgmigrate/cli
 
 go 1.18
 
+replace github.com/peterldowns/pgmigrate => ./
+
 require (
 	github.com/charmbracelet/log v0.2.2
 	github.com/fatih/color v1.15.0

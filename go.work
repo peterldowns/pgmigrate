@@ -4,5 +4,3 @@ use (
 	.
 	./cli
 )
-
-replace github.com/peterldowns/pgmigrate => ./
