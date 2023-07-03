@@ -136,6 +136,7 @@ func (s *Schema) Sort() {
 	s.Indexes = Sort[string](s.Indexes)
 	s.Constraints = Sort[string](s.Constraints)
 	s.Triggers = Sort[string](s.Triggers)
+	s.Data = Sort[string](s.Data)
 }
 
 // Load queries the database and populates the slices of database objects. It

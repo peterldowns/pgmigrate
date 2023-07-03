@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
@@ -13,29 +14,57 @@ type Data struct {
 	Schema  string   `yaml:"schema"`
 	Name    string   `yaml:"name"`
 	Columns []string `yaml:"columns"`
-	Data    []any
-	OrderBy string `yaml:"orderBy"`
+	OrderBy string   `yaml:"orderBy"`
+	Rows    []any
+}
+
+func (d Data) SortKey() string {
+	return d.Name
+}
+
+func (Data) DependsOn() []string {
+	return nil
+}
+
+// from pgx: https://github.com/jackc/pgtype/blob/6830cc09847cfe17ae59177e7f81b67312496108/timestamptz.go#L152
+const pgTimestamptzSecondFormat = "2006-01-02 15:04:05.999999999Z07:00:00"
+
+func tsToString(t time.Time) string {
+	return t.Truncate(time.Microsecond).Format(pgTimestamptzSecondFormat)
 }
 
 func (d Data) String() string {
-	if len(d.Data) == 0 || len(d.Columns) == 0 {
+	if len(d.Rows) == 0 || len(d.Columns) == 0 {
 		return ""
 	}
 	prelude := fmt.Sprintf("INSERT INTO %s (%s) VALUES\n", identifier(d.Schema, d.Name), strings.Join(d.Columns, ", "))
 	rowLen := len(d.Columns)
 	out := prelude
-	for i := 0; i < len(d.Data); i += rowLen {
-		rowValues := d.Data[i : i+rowLen]
+	for i := 0; i < len(d.Rows); i += rowLen {
+		rowValues := d.Rows[i : i+rowLen]
 		values := make([]string, 0, len(rowValues))
 		for _, val := range rowValues {
 			if val == nil {
 				values = append(values, "null")
-			} else {
-				values = append(values, pgtools.QuoteLiteral(fmt.Sprintf("%v", val)))
+				continue
 			}
+			var literal string
+			switch tval := val.(type) {
+			case time.Time:
+				literal = tsToString(tval)
+			case *time.Time:
+				literal = tsToString(*tval)
+			case string:
+				literal = tval
+			case *string:
+				literal = *tval
+			default:
+				literal = fmt.Sprintf("%v", tval)
+			}
+			values = append(values, pgtools.QuoteLiteral(literal))
 		}
 		out += fmt.Sprintf("(%s)", strings.Join(values, ", "))
-		if i != len(d.Data)-rowLen {
+		if i != len(d.Rows)-rowLen {
 			out += ",\n"
 		} else {
 			out += "\n;"
@@ -68,7 +97,7 @@ and c.relname like $2;
 					Name:    name,
 					Columns: d.Columns,
 					OrderBy: d.OrderBy,
-					Data:    []any{},
+					Rows:    []any{},
 				})
 			}
 		} else {
@@ -77,7 +106,7 @@ and c.relname like $2;
 				Name:    d.Name,
 				Columns: d.Columns,
 				OrderBy: d.OrderBy,
-				Data:    []any{},
+				Rows:    []any{},
 			})
 		}
 	}
@@ -131,8 +160,8 @@ from %s
 					ifaces[i] = v.Elem().Interface()
 				}
 			}
-			d.Data = append(d.Data, ifaces...)
+			d.Rows = append(d.Rows, ifaces...)
 		}
 	}
-	return toLoad, nil
+	return Sort[string](toLoad), nil
 }
