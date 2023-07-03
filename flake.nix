@@ -10,6 +10,9 @@
     
     gomod2nix.url = "github:nix-community/gomod2nix";
     gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    nix-filter.url = "github:numtide/nix-filter";
+    nix-filter.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = { self, ... }@inputs:
@@ -26,14 +29,41 @@
         in
         rec {
           packages = rec { 
-            pgmigrate = pkgs.buildGoApplication {
+            pgmigrate = pkgs.buildGoModule {
               pname = "pgmigrate";
               version = version;
-              ldflags = [ "-X github.com/peterldowns/pgmigrate/cli/shared.Version=${version}" ];
-              src = ./.;
-              modules = ./gomod2nix.toml;
-              subPackages = [ "cli" ];
-              doCheck = false;
+              # Every time you update your dependencies (go.mod / go.sum)  you'll
+              # need to update the vendorSha256.
+              #
+              # To find the right hash, set
+              #
+              #   vendorSha256 = pkgs.lib.fakeSha256;
+              #
+              # then run `nix build`, take the correct hash from the output, and set
+              #
+              #   vendorSha256 = <the updated hash>;
+              #
+              # (Yes, that's really how you're expected to do this.)
+              # vendorSha256 = pkgs.lib.fakeSha256;
+              vendorSha256 = pkgs.lib.fakeSha256;
+              src =
+                let
+                  # Set this to `true` in order to show all of the source files
+                  # that will be included in the module build.
+                  debug-tracing = false;
+                  source-files = inputs.nix-filter.lib.filter {
+                    root = ./cli;
+                  };
+                in
+                (
+                  if (debug-tracing) then
+                    pkgs.lib.sources.trace source-files
+                  else
+                    source-files
+                );
+
+              # Add any extra packages required to build the binaries should go here.
+              buildInputs = [ ];
             };
             default = pgmigrate;
           };
