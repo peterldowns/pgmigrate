@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const DefaultSchema = "public"
+
 type Config struct {
 	Schema       string              `yaml:"name"`
 	Dependencies map[string][]string `yaml:"dependencies"`
@@ -32,6 +34,9 @@ type Schema struct {
 }
 
 func Parse(config Config, db *sql.DB) (*Schema, error) {
+	if config.Schema == "" {
+		config.Schema = DefaultSchema
+	}
 	schema := Schema{Config: config}
 	// Load and parse each of the different types of object from the database.
 	if err := schema.Load(db); err != nil {

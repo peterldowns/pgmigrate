@@ -7,9 +7,10 @@ import (
 )
 
 var versionCmd = &cobra.Command{ //nolint:gochecknoglobals
-	Use:     "version",
-	GroupID: "ops",
-	Short:   "Print the version of this binary",
+	Use:              "version",
+	Short:            "Print the version of this binary",
+	GroupID:          "ops",
+	TraverseChildren: true,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		logger, _ := shared.State.Logger()
 		logger.Print(shared.VersionString())

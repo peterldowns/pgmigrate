@@ -197,7 +197,7 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 	}
 	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
-		FROM %s ORDER BY id ASC
+		FROM %s ORDER BY applied_at, id ASC
 	`, pgtools.QuoteIdentifier(m.TableName))
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {

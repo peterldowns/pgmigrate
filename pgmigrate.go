@@ -3,6 +3,7 @@ package pgmigrate
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"io/fs"
 	"strings"
 )
@@ -43,7 +44,7 @@ func Load(filesystem fs.FS) ([]Migration, error) {
 		migrations = append(migrations, migration)
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load: %w", err)
 	}
 	SortByID(migrations)
 	return migrations, nil

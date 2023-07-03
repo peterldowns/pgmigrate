@@ -13,7 +13,18 @@ import (
 var Command = &cobra.Command{ //nolint:gochecknoglobals
 	Version: shared.VersionString(),
 	Use:     "pgmigrate",
-	Short:   "migrate postgres databases",
+	Short:   shared.DocsLink,
+	Example: shared.CLIExample(`
+# Preview and then apply migrations
+pgmigrate plan     # Preview which migrations would be applied
+pgmigrate migrate  # Apply any previously-unapplied migrations
+pgmigrate verify   # Verify that migrations have been applied correctly
+pgmigrate applied  # Show all previously-applied migrations
+
+# Dump the current schema to a file
+pgmigrate dump --out schema.sql
+	`),
+	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {
 			return fmt.Errorf(`invalid command: "%s"`, args[0])
@@ -41,9 +52,8 @@ func init() { //nolint:gochecknoinits
 		"",
 		"[PGM_MIGRATIONS] a path to a directory containing *.sql migrations",
 	)
-	shared.State.Flags.ConfigFile = Command.PersistentFlags().StringP(
+	shared.State.Flags.ConfigFile = Command.PersistentFlags().String(
 		"configfile",
-		"c",
 		"",
 		"[PGM_CONFIGFILE] a path to a configuration file",
 	)
@@ -91,7 +101,7 @@ func init() { //nolint:gochecknoinits
 	Command.AddCommand(versionCmd)
 
 	// dev
-	Command.AddCommand(debugCmd)
+	Command.AddCommand(configCmd)
 	Command.AddCommand(dumpCmd)
 	Command.SetHelpCommandGroupID("dev")
 }

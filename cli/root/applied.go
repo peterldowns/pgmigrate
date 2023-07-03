@@ -11,9 +11,16 @@ import (
 )
 
 var appliedCmd = &cobra.Command{ //nolint:gochecknoglobals
-	Use:              "applied",
-	Aliases:          []string{"list"},
-	Short:            "Show all previously-applied migrations",
+	Use:     "applied",
+	Aliases: []string{"list"},
+	Short:   "Show all previously-applied migrations",
+	Long: shared.CLIHelp(`
+Prints the previously-applied migrations in the order that they were applied
+(applied_at, id ASC).
+
+If there are no applied migrations, or the specified table does not exist, this
+command will print nothing and exit successfully.
+	`),
 	GroupID:          "migrating",
 	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, args []string) error {

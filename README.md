@@ -3,19 +3,9 @@
 | 🚧 This Is A Work In Progress 🚧 |
 
 - [ ] Library
-  - [ ] Docstrings on all public methods/functions
   - [ ] Tests for the schema handling stuff
   - [ ] Generally clean up the code
-  - [ ] Improve error handling
-    - [ ] wrap errors with constant messages
-    - [ ] use an error library that includes stack traces
-- [ ] CLI
-  - some kind of tests!
-  - Flake derivation
-  - Homebrew install instructions
-- [ ] Ops
-  - [ ] cli versioning and releases
-- [ ] Docs
+- [ ] Readme
   - [ ] comparisons to other migration frameworks
   - [ ] example of using pgtestdb
   - [ ] discussion of large/long-running migrations, migration ordering
@@ -33,98 +23,152 @@
 
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.0.3/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.0.4/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 
-pgmigrate is a modern Postgres migrations CLI and golang library. It is designed
-for use by high-velocity teams.
+pgmigrate is a modern Postgres migrations CLI and golang library. It is
+designed for use by high-velocity teams who practice continuous deployment. The
+goal is to make migrations as simple and reliable as possible.
 
-Major features:
+pgmigrate solves the following problems encountered in other database migration
+tools:
 
-- Applies any previously-unapplied migrations, in order &mdash; that's it.
+- you never want migrations to fail because you and a coworker both chose the same numeric prefix (all other migration tools)
+- you want to be able to squash your migration files (all other migration tools)
+- you don't ever want to think about down migrations because you never use them they're confusing and they're completely unnecessary (all other migration tools)
+- you want to generate a human-readable schema.sql from your migrations and keep it up to date in your github repo as part of the CI process. (all other migration tools)
+- if a migration succeeds, you want a record of when it was applied and the hash of its contents (all other migration tools)
+- if a migration fails, you want to be able to edit it and then redeploy without having to psql in to the prod database and set "dirty = 'f'" (golang-migrate/migrate)
+- you want both the CLI tool and the golang library to have all of the same functionality (ariga/atlas)
+
+### Major features
+
+- Applies any previously-unapplied migrations, in ascending filename order &mdash; that's it.
 - Each migration is applied within a transaction.
 - Only "up" migrations, no "down" migrations (you don't want or need them.)
 - Uses [Postgres advisory locks](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) so it's safe to run in parallel.
 - Compatible with [pgtestdb](https://github.com/peterldowns/pgtestdb) so database-backed tests are very fast.
+- Static CLI binary can be easily installed and deployed
+- Can dump your database schema to a single migration file:
+  - This means you can squash your thousands of migration files.
+  - This means you can turn schema conflicts into git conflicts that can be detected in CI.
+  - The dump is human readable, roundtrip-stable (*dumping > applying > dumping* gives you the same result), and can include INSERT statements for specific tables and columns.
+- Run migrations with the cli binary, with the Docker container, or by embedding the library inside your application.
+- All functionality is available as both a CLI or as a library.
+- Ship a shared configuration file in your git repo so your whole team can easily use the CLI to develop migrations.
+- CLI contains "ops" commands for manually modifying migration state in your database, for those rare occasions when something goes wrong in prod.
 
 # Documentation
 
-- [This page, https://github.com/peterldowns/pgmigrate](https://github.com/peterldowns/pgmigrate)
-- [The go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate)
+- The primary documentation is [this Github README, https://github.com/peterldowns/pgmigrate](https://github.com/peterldowns/pgmigrate).
+- The code itself is supposed to be well-organized, and each function has a
+  meaningful docstring, so you should be able to explore it quite easily using
+  an LSP plugin or by reading the code in Github or in your local editor.
+- You may also refer to [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
 
-This page is the primary source for documentation. The code itself is supposed
-to be well-organized, and each function has a meaningful docstring, so you
-should be able to explore it quite easily using an LSP plugin, reading the
-code, or clicking through the go.dev docs.
 
-## Why do I want this?
-You want pgmigrate because you just want migrations to be simpler and for them
-to run successfully when you update your application. You want your whole team
-to be able to understand a simple system with a few, well-documented invariants.
 
-You don't want to worry about rebasing or updating your PR just to bump the
-sequence number of your migration file. You don't want to break main because you
-and a coworker both chose the same sequence number for your migration. You just
-want your team to merge migrations and keep shipping.
+# Library
 
-You want to be able to fix migration failures and redeploy without any manual
-intervention. When you merge the fix, pgmigrate will run the new migration
-without complaining. (Believe it or not, but some migration frameworks set a
-"dirty" bit when migrations fail, which means that you have to manually psql
-into production and set `dirty = 'f'` before you can deploy again.)
+## Install
 
-You want to run migrations as an init step as part of your modern,
-containerized, deployment workflow.
+* requires golang 1.18+ because it uses generics. 
+* only depends on stdlib; all dependencies in the go.mod are for tests.
 
-You want to use the same migrations logic as an embedded golang library, as a
-standalone cli, or as a pre-built container.
+```bash
+# library
+go get github.com/peterldowns/pgmigrate@latest
+```
 
-Finally, you never write or think about down migrations again in your life! You
-aren't using them, they aren't useful, it's 2023 we do not need them!
+## Usage
+
+TODO:
+- example with embedded file system
+- example with root file system
+- migrator.go vs pgmigrate.go
+
+Please see [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
+
+# CLI
+
+## Install
+
+#### Homebrew:
+```bash
+# install it
+TODO: not yet published
+brew install peterldowns/tap/pgmigrate
+```
+
+#### Golang:
+```bash
+# run it
+go run github.com/peterldowns/pgmigrate/cli@latest --help
+# install it
+go install github.com/peterldowns/pgmigrate/cli@latest
+```
+
+#### Nix (flakes):
+```bash
+# run it
+nix run github:peterldowns/pgmigrate -- --help
+# install it
+nix profile install --refresh github:peterldowns/pgmigrate
+```
+
+#### Manually download binaries
+Visit [the latest Github release](https://github.com/peterldowns/pgmigrate/releases/latest) and pick the appropriate binary. Or, click one of the shortcuts here:
+- [darwin-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-amd64)
+- [darwin-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-arm64)
+- [linux-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-amd64)
+- [linux-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-arm64)
+
+## Usage
+
+TODO:
+- configure
+- applied
+- plan
+- migrate
+- verify
+- ops
+
+The CLI ships with documentation and examples built in, please see `pgmigrate
+help` and `pgmigrate help <command>` for more details.
+
+# FAQ
+
 ## How does it work?
 
-pgmigrate has relatively simple invariants and behavior compared to other
-migration libraries:
+pgmigrate has the following invariants, rules, and behavior:
 
-- A migration is a file whose name ends in `.sql`. The part before the extension
-is its unique ID.
-- All migrations are "up" migrations, there is no such thing as a "down"
-migration.
-- The migrations table is a table that pgmigrate uses to track which migrations
-have been applied. It has the following schema:
+- A migration is a file whose name ends in `.sql`. The part before the extension is its unique ID.
+- All migrations are "up" migrations, there is no such thing as a "down" migration.
+- The migrations table is a table that pgmigrate uses to track which migrations have been applied. It has the following schema:
   - `id (text not null)`: the ID of the migration
   - `checksum (text not null)`: the MD5() hash of the contents of the migration when it was applied.
   - `execution_time_in_millis (integer not null)`: how long it took to apply the migration, in milliseconds.
   - `applied_at (timestamp with time zone not null)`: the time at which the migration was finished applying and this row was inserted.
-- A plan is an ordered list of previously-unapplied migrations. The migrations
-are sorted by their IDs, in ascending lexicographical/alphabetical order. This
-is the same order that you get when you use `ls` or `sort`.
-- Each time migrations are applied, pgmigrate calculates the plan, then attempts
-to apply each migration one at a time.
+- A plan is an ordered list of previously-unapplied migrations. The migrations are sorted by their IDs, in ascending lexicographical/alphabetical order. This is the same order that you get when you use `ls` or `sort`.
+- Each time migrations are applied, pgmigrate calculates the plan, then attempts to apply each migration one at a time.
 - To apply a migration, pgmigrate:
   - Begins a transaction.
-  - Runs the migration SQL.
-  - Creates and inserts a new row in the migrations table.
+    - Runs the migration SQL.
+    - Creates and inserts a new row in the migrations table.
   - Commits the transaction.
-- Because each migration is applied in an explicit transaction, you **must not**
-use `BEGIN`/`COMMIT`/`ROLLBACK` within your migration files.
-- Any error when applying a migration will result in an immediate failure. If
-there are other migrations later in the plan, they will not be applied.
-- If and only if a migration is applied successfully, there will be a row in the
-`migrations` table containing its ID.
-- pgmigrate uses [Postgres advisory locks](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) to ensure that only once instance
-is attempting to run migrations at any point in time. It is safe to run
-migrations as part of an init container, when your binary starts, or any other
-parallel way.
-- After a migration has been applied you should never edit the file's contents.
-If you do, pgmigrate will warn you that the hash of the migration differs from
-the hash of the migration when it was applied.
-- After a migration has been applied you should never delete the migration. If
-you do, pgmigrate will warn you that a migration that had previously been
-applied is no longer present.
+- Because each migration is applied in an explicit transaction, you **must not** use `BEGIN`/`COMMIT`/`ROLLBACK` within your migration files.
+- Any error when applying a migration will result in an immediate failure. If there are other migrations later in the plan, they will not be applied.
+- If and only if a migration is applied successfully, there will be a row in the `migrations` table containing its ID.
+- pgmigrate uses [Postgres advisory locks](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) to ensure that only once instance is attempting to run migrations at any point in time.
+- It is safe to run migrations as part of an init container, when your binary starts, or any other parallel way.
+- After a migration has been applied you should not edit the file's contents.
+  - Editing its contents will not cause it to be re-applied.
+  - Editing its contents will cause pgmigrate to show a warning that the hash of the migration differs from the hash of the migration when it was applied.
+- After a migration has been applied you should never delete the migration. If you do, pgmigrate will warn you that a migration that had previously been applied is no longer present.
 
 ## How should my team work with it?
+
 ### the migrations directory
 Your team's repository should include a `migrations/` directory containing all known migrations.
 
@@ -314,31 +358,6 @@ pgmigrate --database $PROD plan
 pgmigrate --database $PROD verify
 ```
 
-
-# Library
-
-## Install
-* requires golang 1.18+ because it uses generics. 
-* only depends on stdlib; all dependencies in the go.mod are for tests.
-```bash
-# library
-go get github.com/peterldowns/pgmigrate@latest
-```
-
-## Usage
-
-# CLI
-
-## Install
-
-```bash
-go install github.com/peterldowns/pgmigrate/cli@latest
-```
-
-## Usage
-
-# FAQ
-
 # Acknowledgements
 
 I'd like to thank and acknowledge:
@@ -350,18 +369,3 @@ I'd like to thank and acknowledge:
   implement `pgmigrate dump`.
 - The backend team at Pipe for helping test and validate this project's
   assumptions, utility, and implementation.
-
-# Notes
-
-## `pgmigrate dump`
-The goal of `pgmigrate dump --database $ORIGINAL > schema.sql` is for the resulting sql file to be:
-  - usable: can `psql $NEW -f schema.sql` to create a new database with the same schema.
-  - diffable: if there are migrations in different PRs/branches that will conflict with each other,
-      diffing the generated schema.sql files from each branch should result in a merge conflict that
-      cannot be automatically resolved.
-  - roundtrippable: dumping `pgmigrate dump --database $NEW > schema.sql` will result in 0 changes.
-  - customizable: you can include tables to dump values from (for enum tables) and you can explicitly
-      add dependencies between objects that will be respected during the dump, to work around faulty
-      dependency detection.
-
-

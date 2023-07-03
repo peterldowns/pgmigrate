@@ -40,7 +40,7 @@
             #
             # (Yes, that's really how you're expected to do this.)
             #vendorSha256 = pkgs.lib.fakeSha256;
-            vendorSha256 = "sha256-aeJNkEMMj7nILXzkKZQ+D7hKSSZLbUmkYADiv9o/fW0=";
+            vendorSha256 = "sha256-lpZub9mh1wHoDDXTk4YLGrUx0AkZCdjf4GCPiMtCYig=";
             GOWORK = "off";
             postInstall = ''
               mv $out/bin/cli $out/bin/pgmigrate
@@ -138,7 +138,6 @@
               # For testing purposes
               export MIGRATIONS='internal/migrations'
               export DATABASE='postgres://postgres:password@localhost:5433/postgres'
-              export TESTDB='postgres://pd:@localhost:5432/postgres'
             '';
 
             # Need to disable fortify hardening because GCC is not built with -oO,

@@ -11,9 +11,19 @@ import (
 )
 
 var verifyCmd = &cobra.Command{ //nolint:gochecknoglobals
-	Use:     "verify",
-	GroupID: "migrating",
-	Short:   "Verify that migrations have been applied correctly",
+	Use:   "verify",
+	Short: "Verify that migrations have been applied correctly",
+	Long: shared.CLIHelp(`
+Warns about any migrations that:
+- are marked as applied in the database table but do not exist in the migrations
+directory
+- have a different checksum in the database than the current file hash
+
+If there are any warnings, exits with status code 1.
+Otherwise, succeeds without printing anything and exits with status code 0.
+	`),
+	GroupID:          "migrating",
+	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shared.State.Parse()
 		database := shared.State.Database()
@@ -40,6 +50,9 @@ var verifyCmd = &cobra.Command{ //nolint:gochecknoglobals
 				attrs = append(attrs, key, val)
 			}
 			slogger.With(attrs...).Warn(verr.Message)
+		}
+		if len(verrs) != 0 {
+			os.Exit(1) //nolint:revive // deep-exit
 		}
 		return nil
 	},
