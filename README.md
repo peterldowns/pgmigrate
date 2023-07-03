@@ -96,17 +96,9 @@ Please see [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https:
 
 #### Homebrew:
 ```bash
+# TODO: not yet published
 # install it
-TODO: not yet published
-brew install peterldowns/tap/pgmigrate
-```
-
-#### Golang:
-```bash
-# run it
-go run github.com/peterldowns/pgmigrate/cli@latest --help
-# install it
-go install github.com/peterldowns/pgmigrate/cli@latest
+# brew install peterldowns/tap/pgmigrate
 ```
 
 #### Nix (flakes):
@@ -123,6 +115,7 @@ Visit [the latest Github release](https://github.com/peterldowns/pgmigrate/relea
 - [darwin-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-arm64)
 - [linux-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-amd64)
 - [linux-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-arm64)
+
 
 ## Usage
 
