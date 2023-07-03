@@ -1,0 +1,78 @@
+name: release
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - main
+jobs:
+  upload-binaries:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: setup-go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+        cache: true
+        cache-dependency-path: go.sum
+    - name: release-darwin-amd64
+      run: |
+        ldflags=$(./scripts/golang-ldflags.sh)
+        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-darwin-amd64 ./cli
+        upload_url=$(./scripts/upsert-gh-release.sh)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN}}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @bin/pgmigrate-darwin-amd64 \
+          "$upload_url?name=pgmigrate-darwin-amd64&label=pgmigrate-darwin-amd64"
+        bottle_name=$(./scripts/make-bottle.sh ./bin/pgmigrate-darwin-amd64 monterey)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN}}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @"${bottle_name}" \
+          "$upload_url?name=${bottle_name}&label=${bottle_name}"
+    - name: release-darwin-arm64
+      run: |
+        ldflags=$(./scripts/golang-ldflags.sh)
+        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-darwin-arm64 ./cli
+        upload_url=$(./scripts/upsert-gh-release.sh)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @bin/pgmigrate-darwin-arm64 \
+          "$upload_url?name=pgmigrate-darwin-arm64&label=pgmigrate-darwin-arm64"
+        bottle_name=$(./scripts/make-bottle.sh ./bin/pgmigrate-darwin-arm64 arm64_monterey)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN}}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @"${bottle_name}" \
+          "$upload_url?name=${bottle_name}&label=${bottle_name}"
+    - name: release-linux-arm64
+      run: |
+        ldflags=$(./scripts/golang-ldflags.sh)
+        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-linux-arm64 ./cli
+        upload_url=$(./scripts/upsert-gh-release.sh)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @bin/pgmigrate-linux-arm64 \
+          "$upload_url?name=pgmigrate-linux-arm64&label=pgmigrate-linux-arm64"
+        bottle_name=$(./scripts/make-bottle.sh ./bin/pgmigrate-linux-arm64 arm64_linux)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN}}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @"${bottle_name}" \
+          "$upload_url?name=${bottle_name}&label=${bottle_name}"
+    - name: release-linux-amd64
+      run: |
+        ldflags=$(./scripts/golang-ldflags.sh)
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-linux-amd64 ./cli
+        upload_url=$(./scripts/upsert-gh-release.sh)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @bin/pgmigrate-linux-amd64 \
+          "$upload_url?name=pgmigrate-linux-amd64&label=pgmigrate-linux-amd64"
+        bottle_name=$(./scripts/make-bottle.sh ./bin/pgmigrate-linux-amd64 x86_64_linux)
+        curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN}}" \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @"${bottle_name}" \
+          "$upload_url?name=${bottle_name}&label=${bottle_name}"
+

@@ -13,7 +13,9 @@ default:
 
 # build pgmigrate
 build:
-  go build -o bin/pgmigrate ./cli
+  #!/usr/bin/env bash
+  ldflags=$(./scripts/golang-ldflags.sh)
+  go build -ldflags "$ldflags" -o bin/pgmigrate ./cli
 
 # test all packages
 test *args='./... ./cli/...':
@@ -64,7 +66,6 @@ build-docker:
     --tag ghcr.io/peterldowns/pgmigrate:"$COMMIT_SHA" \
     --tag ghcr.io/peterldowns/pgmigrate:"$VERSION-commit.$COMMIT_SHA" \
     --tag ghcr.io/peterldowns/pgmigrate:latest \
-    --tag pgmigrate \
     --cache-from ghcr.io/peterldowns/pgmigrate:latest \
     --build-arg COMMIT_SHA="$COMMIT_SHA" \
     --build-arg VERSION="$VERSION" \
