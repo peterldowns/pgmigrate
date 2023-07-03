@@ -9,7 +9,7 @@ import (
 var Command = &cobra.Command{ //nolint:gochecknoglobals
 	Use:     "ops",
 	Aliases: []string{"op", "admin"},
-	Short:   "manually perform operations on migration records",
+	Short:   "Perform manual operations on migration records",
 	GroupID: "ops",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 0 {

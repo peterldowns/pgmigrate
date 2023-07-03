@@ -13,6 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 
+	"github.com/peterldowns/pgmigrate"
 	"github.com/peterldowns/pgmigrate/internal/schema"
 )
 
@@ -20,12 +21,14 @@ type Flags struct {
 	LogFormat  *string // see logger.go
 	Database   *string // see root.go
 	Migrations *string // see root.go
-	Configfile *string // see root.go
+	TableName  *string // see root.go
+	ConfigFile *string // see root.go
 }
 type Config struct {
 	Database   string        `yaml:"database"`
-	LogFormat  LogFormat     `yaml:"log_format"`
 	Migrations string        `yaml:"migrations"`
+	LogFormat  LogFormat     `yaml:"log_format"`
+	TableName  string        `yaml:"table_name"`
 	Schema     schema.Config `yaml:"schema"`
 }
 
@@ -59,7 +62,7 @@ func (state *StateT) Parse() {
 func (state StateT) Configfile() Variable[string] {
 	return NewVariable(
 		"config-file",
-		*state.Flags.Configfile,
+		*state.Flags.ConfigFile,
 		os.Getenv("PGM_CONFIGFILE"),
 		checkpath(".pgmigrate.yaml"), // in cwd
 		repopath(".pgmigrate.yaml"),  // in repo root
@@ -83,7 +86,7 @@ func (state StateT) LogFormat() Variable[LogFormat] {
 		LogFormat(*state.Flags.LogFormat),
 		LogFormat(os.Getenv("PGM_LOG_FORMAT")),
 		state.Config.LogFormat,
-		LogFormatText, // default to LogFormatText
+		LogFormatText, // default
 	)
 }
 
@@ -94,6 +97,16 @@ func (state StateT) Migrations() Variable[string] {
 		os.Getenv("PGM_MIGRATIONS"),
 		state.Config.Migrations,
 		"", // default to missing
+	)
+}
+
+func (state StateT) TableName() Variable[string] {
+	return NewVariable(
+		"table-name",
+		*state.Flags.TableName,
+		os.Getenv("PGM_TABLENAME"),
+		state.Config.TableName,
+		pgmigrate.DefaultTableName, // default
 	)
 }
 

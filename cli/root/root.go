@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/peterldowns/pgmigrate"
 	"github.com/peterldowns/pgmigrate/cli/root/ops"
 	"github.com/peterldowns/pgmigrate/cli/shared"
 )
@@ -28,12 +29,6 @@ func init() { //nolint:gochecknoinits
 	Command.SilenceUsage = false
 	Command.SetVersionTemplate("{{.Version}}\n")
 
-	shared.State.Flags.LogFormat = Command.PersistentFlags().StringP(
-		"log-format",
-		"l",
-		string(shared.LogFormatText),
-		fmt.Sprintf("[PGM_LOGFORMAT] '%s' or '%s', the log line format", shared.LogFormatText, shared.LogFormatJSON),
-	)
 	shared.State.Flags.Database = Command.PersistentFlags().StringP(
 		"database",
 		"d",
@@ -46,11 +41,27 @@ func init() { //nolint:gochecknoinits
 		"",
 		"[PGM_MIGRATIONS] a path to a directory containing *.sql migrations",
 	)
-	shared.State.Flags.Configfile = Command.PersistentFlags().StringP(
+	shared.State.Flags.ConfigFile = Command.PersistentFlags().StringP(
 		"configfile",
-		"f",
+		"c",
 		"",
 		"[PGM_CONFIGFILE] a path to a configuration file",
+	)
+	shared.State.Flags.LogFormat = Command.PersistentFlags().String(
+		"log-format",
+		"",
+		fmt.Sprintf(
+			"[PGM_LOGFORMAT] '%s' or '%s', the log line format (default '%s')",
+			shared.LogFormatText, shared.LogFormatJSON, shared.LogFormatText,
+		),
+	)
+	shared.State.Flags.TableName = Command.PersistentFlags().String(
+		"table-name",
+		"",
+		fmt.Sprintf(
+			"[PGM_TABLENAME] the table name to use to store migration records (default '%s')",
+			pgmigrate.DefaultTableName,
+		),
 	)
 	_ = Command.MarkPersistentFlagDirname("migrations")
 

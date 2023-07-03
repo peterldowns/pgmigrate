@@ -8,7 +8,7 @@ import (
 
 var debugCmd = &cobra.Command{
 	Use:     "debug",
-	Short:   "parse and log the current configuration",
+	Short:   "Print the current configuration / settings",
 	GroupID: "dev",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		logger, _ := shared.State.Logger()
@@ -21,10 +21,12 @@ var debugCmd = &cobra.Command{
 		database := shared.State.Database()
 		logformat := shared.State.LogFormat()
 		migrations := shared.State.Migrations()
+		tablename := shared.State.TableName()
 
 		logger.Info(migrations.Name(), "is_set", migrations.IsSet(), "value", migrations.Value())
 		logger.Info(database.Name(), "is_set", database.IsSet(), "value", database.Value())
 		logger.Info(logformat.Name(), "is_set", logformat.IsSet(), "value", logformat.Value())
+		logger.Info(tablename.Name(), "is_set", tablename.IsSet(), "value", tablename.Value())
 
 		return nil
 	},
