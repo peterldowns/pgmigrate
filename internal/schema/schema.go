@@ -338,8 +338,11 @@ func (s *Schema) String() string {
 	// Add any data-inserting statements after all other database objects have
 	// been created.
 	for _, obj := range s.Data {
-		out.WriteString(obj.String())
-		out.WriteString("\n\n")
+		statement := obj.String()
+		if statement != "" {
+			out.WriteString(obj.String())
+			out.WriteString("\n\n")
+		}
 	}
 
 	return strings.TrimSpace(out.String())

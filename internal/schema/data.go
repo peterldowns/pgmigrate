@@ -18,6 +18,9 @@ type Data struct {
 }
 
 func (d Data) String() string {
+	if len(d.Data) == 0 || len(d.Columns) == 0 {
+		return ""
+	}
 	prelude := fmt.Sprintf("INSERT INTO %s (%s) VALUES\n", identifier(d.Schema, d.Name), strings.Join(d.Columns, ", "))
 	rowLen := len(d.Columns)
 	out := prelude
