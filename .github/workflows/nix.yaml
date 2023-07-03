@@ -33,4 +33,4 @@ jobs:
     - run: nix run .#pgmigrate -- --help
     # standard
     - run: nix-shell --run 'which go'
-    - run: nix-build && ./result/bin/localias --help
+    - run: nix-build && ./result/bin/pgmigrate --help
