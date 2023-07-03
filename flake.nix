@@ -39,8 +39,8 @@
             #   vendorSha256 = <the updated hash>;
             #
             # (Yes, that's really how you're expected to do this.)
-            # vendorSha256 = pkgs.lib.fakeSha256;
-            vendorSha256 = "sha256-b+H26ejOmyLca3/Z0u/TKLMZ13kE+CgRaAA8Dx4XnpE=";
+            #vendorSha256 = pkgs.lib.fakeSha256;
+            vendorSha256 = "sha256-aeJNkEMMj7nILXzkKZQ+D7hKSSZLbUmkYADiv9o/fW0=";
             GOWORK = "off";
             postInstall = ''
               mv $out/bin/cli $out/bin/pgmigrate
@@ -52,6 +52,14 @@
                 debug-tracing = false;
                 source-files = inputs.nix-filter.lib.filter {
                   root = ./.;
+                  include = [
+                    (inputs.nix-filter.lib.matchExt "go")
+                    "go.mod"
+                    "go.sum"
+                    "go.work"
+                    "cli"
+                    "internal"
+                  ];
                 };
               in
               (
