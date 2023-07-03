@@ -37,7 +37,7 @@ tmp/
 **/.DS_Store
 
 # configfile
-.localias.yaml
+.pgmigrate.yaml
 
 # artifacts
 dist/
@@ -45,7 +45,5 @@ build/
 lib/
 *.a
 
-# stupid golang bullshit
+# golang workspace hashes
 go.work.sum
-# config file for testing
-.pgmigrate.yaml
