@@ -7,28 +7,86 @@
 
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
+    
+    gomod2nix.url = "github:nix-community/gomod2nix";
+    gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    nix-filter.url = "github:numtide/nix-filter";
   };
 
-  outputs = { ... }@inputs:
-    inputs.flake-utils.lib.eachDefaultSystem
-      (system:
+  outputs = { self, ... }@inputs:
+    inputs.flake-utils.lib.eachDefaultSystem (system:
         let
-          overlays = [ ];
+          overlays = [
+            inputs.gomod2nix.overlays.default
+          ];
           pkgs = import inputs.nixpkgs {
             inherit system overlays;
           };
           lib = pkgs.lib;
           version = (builtins.readFile ./VERSION);
+          commit = if (builtins.hasAttr "rev" self) then (builtins.substring 0 7 self.rev) else "unknown";
         in
         rec {
-          packages = rec { };
-          apps = rec { };
+          packages = rec { 
+            pgmigrate = pkgs.buildGoModule {
+              pname = "pgmigrate";
+              version = version;
+              # Every time you update your dependencies (go.mod / go.sum)  you'll
+              # need to update the vendorSha256.
+              #
+              # To find the right hash, set
+              #
+              #   vendorSha256 = pkgs.lib.fakeSha256;
+              #
+              # then run `nix build`, take the correct hash from the output, and set
+              #
+              #   vendorSha256 = <the updated hash>;
+              #
+              # (Yes, that's really how you're expected to do this.)
+              # vendorSha256 = pkgs.lib.fakeSha256;
+              vendorSha256 = "sha256-b+H26ejOmyLca3/Z0u/TKLMZ13kE+CgRaAA8Dx4XnpE=";
+              GOWORK="off";
+              postInstall = ''
+                mv $out/bin/cli $out/bin/pgmigrate
+              '';
+              src =
+                let
+                  # Set this to `true` in order to show all of the source files
+                  # that will be included in the module build.
+                  debug-tracing = false;
+                  source-files = inputs.nix-filter.lib.filter {
+                    root = ./.;
+                  };
+                in
+                (
+                  if (debug-tracing) then
+                    pkgs.lib.sources.trace source-files
+                  else
+                    source-files
+                );
+
+              # Add any extra packages required to build the binaries should go here.
+              buildInputs = [ ];
+              ldflags = [
+                "-X github.com/peterldowns/pgmigrate/cli/shared.Version=${version}"
+                "-X github.com/peterldowns/pgmigrate/cli/shared.Commit=${commit}"
+              ];
+              modRoot = "./cli";
+            };
+            default = pgmigrate;
+          };
+          apps = rec {
+            pgmigrate = {
+              type = "app";
+              program = "${packages.pgmigrate}/bin/pgmigrate";
+            };
+            default = pgmigrate;
+          };
           devShells = rec {
             default = pkgs.mkShell {
               buildInputs = [ ];
               packages = with pkgs; [
-                # Python
-                python311Full
                 # Go
                 delve
                 go-outline
@@ -40,6 +98,7 @@
                 # Nix
                 rnix-lsp
                 nixpkgs-fmt
+                gomod2nix
                 # Other
                 just
                 postgresql
