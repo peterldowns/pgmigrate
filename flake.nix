@@ -7,13 +7,17 @@
 
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
+    
+    gomod2nix.url = "github:nix-community/gomod2nix";
+    gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { ... }@inputs:
-    inputs.flake-utils.lib.eachDefaultSystem
-      (system:
+  outputs = { self, ... }@inputs:
+    inputs.flake-utils.lib.eachDefaultSystem (system:
         let
-          overlays = [ ];
+          overlays = [
+            inputs.gomod2nix.overlays.default
+          ];
           pkgs = import inputs.nixpkgs {
             inherit system overlays;
           };
@@ -21,14 +25,29 @@
           version = (builtins.readFile ./VERSION);
         in
         rec {
-          packages = rec { };
-          apps = rec { };
+          packages = rec { 
+            pgmigrate = pkgs.buildGoApplication {
+              pname = "pgmigrate";
+              version = version;
+              ldflags = [ "-X github.com/peterldowns/pgmigrate/cli/shared.Version=${version}" ];
+              src = ./.;
+              modules = ./gomod2nix.toml;
+              subPackages = [ "cli" ];
+              doCheck = false;
+            };
+            default = pgmigrate;
+          };
+          apps = rec {
+            pgmigrate = {
+              type = "app";
+              program = "${packages.pgmigrate}/bin/pgmigrate";
+            };
+            default = pgmigrate;
+          };
           devShells = rec {
             default = pkgs.mkShell {
               buildInputs = [ ];
               packages = with pkgs; [
-                # Python
-                python311Full
                 # Go
                 delve
                 go-outline
@@ -40,6 +59,7 @@
                 # Nix
                 rnix-lsp
                 nixpkgs-fmt
+                gomod2nix
                 # Other
                 just
                 postgresql
