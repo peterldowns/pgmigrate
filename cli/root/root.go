@@ -103,5 +103,6 @@ func init() { //nolint:gochecknoinits
 	// dev
 	Command.AddCommand(configCmd)
 	Command.AddCommand(dumpCmd)
+	Command.AddCommand(newCmd)
 	Command.SetHelpCommandGroupID("dev")
 }

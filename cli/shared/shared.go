@@ -64,8 +64,8 @@ func (state StateT) Configfile() Variable[string] {
 		"config-file",
 		*state.Flags.ConfigFile,
 		os.Getenv("PGM_CONFIGFILE"),
-		checkpath(".pgmigrate.yaml"), // in cwd
-		repopath(".pgmigrate.yaml"),  // in repo root
+		CheckPath(".pgmigrate.yaml"), // in cwd
+		RepoPath(".pgmigrate.yaml"),  // in repo root
 		"",                           // default to missing
 	)
 }
@@ -124,16 +124,16 @@ func (state StateT) Logger() (*log.Logger, LogAdapter) {
 	return logger, LogAdapter{logger}
 }
 
-func repopath(p string) string {
+func RepoPath(p string) string {
 	root, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
 	if err != nil {
 		return ""
 	}
 	rootConfig := path.Join(strings.TrimSpace(string(root)), p)
-	return checkpath(rootConfig)
+	return CheckPath(rootConfig)
 }
 
-func checkpath(p string) string {
+func CheckPath(p string) string {
 	p, err := filepath.Abs(p)
 	if err != nil {
 		return ""
