@@ -58,17 +58,12 @@ update-version version:
 # builds and pushes tbd-dbtools/migrate, tagged with :latest and :$COMMIT_SHA
 build-docker:
   #!/usr/bin/env bash
-  COMMIT_SHA=$(git log -1 | head -1 | cut -f 2 -d ' ')
+  COMMIT_SHA=$(git rev-parse --short HEAD || echo "unknown")
   VERSION=$(cat ./VERSION)
-  docker buildx build \
-    --platform linux/arm64,linux/amd64 \
+  docker build \
     --label pgmigrate \
-    --tag ghcr.io/peterldowns/pgmigrate:"$COMMIT_SHA" \
-    --tag ghcr.io/peterldowns/pgmigrate:"$VERSION-commit.$COMMIT_SHA" \
-    --tag ghcr.io/peterldowns/pgmigrate:latest \
-    --cache-from ghcr.io/peterldowns/pgmigrate:latest \
+    --tag local-pgmigrate \
     --build-arg COMMIT_SHA="$COMMIT_SHA" \
     --build-arg VERSION="$VERSION" \
     --file ./Dockerfile \
-    --output type=image,push=false \
     .
