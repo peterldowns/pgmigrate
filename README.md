@@ -1,63 +1,27 @@
-| ⚠️   WARNING                      |
-|:-------------------------------- |
-| 🚧 This Is A Work In Progress 🚧 |
-
-- [ ] Library
-  - [ ] Tests for the schema handling stuff
-  - [ ] Generally clean up the code
-- [ ] Readme
-  - [ ] comparisons to other migration frameworks
-  - [ ] example of using pgtestdb
-  - [ ] discussion of large/long-running migrations, migration ordering
-  - [ ] how to check the dump for differences in CI
-- [ ] Wishlist
-  - [ ] make `*Result` diffable, allow generating migration from current state of database.
-    - docs should say for now, just use [https://github.com/djrobstep/migra](https://github.com/djrobstep/migra)
-  - [ ] some kind of linting
-    - BEGIN/COMMIT/ROLLBACK
-    - serial vs. identity
-    - pks / fks with indexes
-    - uppercase / mixed case
-    - https://squawkhq.com/
-    - https://github.com/sqlfluff/sqlfluff
-
 # 🐽 pgmigrate
 
 ![Latest Version](https://badgers.space/badge/latest%20version/v0.0.4/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
-
 pgmigrate is a modern Postgres migrations CLI and golang library. It is
 designed for use by high-velocity teams who practice continuous deployment. The
 goal is to make migrations as simple and reliable as possible.
-
-pgmigrate solves the following problems encountered in other database migration
-tools:
-
-- you never want migrations to fail because you and a coworker both chose the same numeric prefix (all other migration tools)
-- you want to be able to squash your migration files (all other migration tools)
-- you don't ever want to think about down migrations because you never use them they're confusing and they're completely unnecessary (all other migration tools)
-- you want to generate a human-readable schema.sql from your migrations and keep it up to date in your github repo as part of the CI process. (all other migration tools)
-- if a migration succeeds, you want a record of when it was applied and the hash of its contents (all other migration tools)
-- if a migration fails, you want to be able to edit it and then redeploy without having to psql in to the prod database and set "dirty = 'f'" (golang-migrate/migrate)
-- you want both the CLI tool and the golang library to have all of the same functionality (ariga/atlas)
 
 ### Major features
 
 - Applies any previously-unapplied migrations, in ascending filename order &mdash; that's it.
 - Each migration is applied within a transaction.
-- Only "up" migrations, no "down" migrations (you don't want or need them.)
+- Only "up" migrations, no "down" migrations.
 - Uses [Postgres advisory locks](https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS) so it's safe to run in parallel.
-- Compatible with [pgtestdb](https://github.com/peterldowns/pgtestdb) so database-backed tests are very fast.
-- Static CLI binary can be easily installed and deployed
-- Can dump your database schema to a single migration file:
-  - This means you can squash your thousands of migration files.
-  - This means you can turn schema conflicts into git conflicts that can be detected in CI.
-  - The dump is human readable, roundtrip-stable (*dumping > applying > dumping* gives you the same result), and can include INSERT statements for specific tables and columns.
-- Run migrations with the cli binary, with the Docker container, or by embedding the library inside your application.
-- All functionality is available as both a CLI or as a library.
-- Ship a shared configuration file in your git repo so your whole team can easily use the CLI to develop migrations.
+- All functionality is available as a golang library, a docker container, and as a static cli binary
+- Can dump your database schema and data from arbitrary tables to a single migration file
+  - This lets you squash migrations
+  - This lets you prevent schema conflicts in CI
+  - The dumped sql is human readable
+  - The dumping process is roundtrip-stable (*dumping > applying > dumping* gives you the same result)
+- Supports a shared configuration file that you can commit to your git repo
 - CLI contains "ops" commands for manually modifying migration state in your database, for those rare occasions when something goes wrong in prod.
+- Compatible with [pgtestdb](https://github.com/peterldowns/pgtestdb) so database-backed tests are very fast.
 
 # Documentation
 
@@ -66,29 +30,6 @@ tools:
   meaningful docstring, so you should be able to explore it quite easily using
   an LSP plugin or by reading the code in Github or in your local editor.
 - You may also refer to [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
-
-
-
-# Library
-
-## Install
-
-* requires golang 1.18+ because it uses generics. 
-* only depends on stdlib; all dependencies in the go.mod are for tests.
-
-```bash
-# library
-go get github.com/peterldowns/pgmigrate@latest
-```
-
-## Usage
-
-TODO:
-- example with embedded file system
-- example with root file system
-- migrator.go vs pgmigrate.go
-
-Please see [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
 
 # CLI
 
@@ -101,6 +42,21 @@ Please see [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https:
 # brew install peterldowns/tap/pgmigrate
 ```
 
+#### Docker:
+```bash
+# The default CMD is "pgmigrate" which just shows the help screen.
+docker run -it --rm ghcr.io/peterldowns/pgmigrate:latest
+# To actually run migrations, you'll want to make sure the container can access
+# your database and migrations directory and specify a command. To access a
+# database running on the host, use `host.docker.internal` instead of
+# `localhost` in the connection string:
+docker run -it --rm \
+  --volume $(pwd)//migrations:/migrations \
+  --env PGM_MIGRATIONS=/migrations \
+  --env PGM_DATABASE='postgresql://postgres:password@host.docker.internal:5433/postgres' \
+  ghcr.io/peterldowns/pgmigrate:latest \
+  pgmigrate plan
+```
 #### Nix (flakes):
 ```bash
 # run it
@@ -119,16 +75,73 @@ Visit [the latest Github release](https://github.com/peterldowns/pgmigrate/relea
 
 ## Usage
 
-TODO:
-- configure
-- applied
-- plan
-- migrate
-- verify
-- ops
-
 The CLI ships with documentation and examples built in, please see `pgmigrate
 help` and `pgmigrate help <command>` for more details.
+
+```shell
+# pgmigrate --help
+Docs: https://github.com/peterldowns/pgmigrate
+
+Usage:
+  pgmigrate [flags]
+  pgmigrate [command]
+
+Examples:
+  # Preview and then apply migrations
+  pgmigrate plan     # Preview which migrations would be applied
+  pgmigrate migrate  # Apply any previously-unapplied migrations
+  pgmigrate verify   # Verify that migrations have been applied correctly
+  pgmigrate applied  # Show all previously-applied migrations
+  
+  # Dump the current schema to a file
+  pgmigrate dump --out schema.sql
+
+Migrating:
+  applied     Show all previously-applied migrations
+  migrate     Apply any previously-unapplied migrations
+  plan        Preview which migrations would be applied
+  verify      Verify that migrations have been applied correctly
+
+Operations:
+  ops         Perform manual operations on migration records
+  version     Print the version of this binary
+
+Development:
+  config      Print the current configuration / settings
+  dump        Dump the database schema as a single migration file
+  help        Help about any command
+  new         generate the name of the next migration file based on the current sequence prefix
+
+Flags:
+      --configfile string   [PGM_CONFIGFILE] a path to a configuration file
+  -d, --database string     [PGM_DATABASE] a 'postgres://...' connection string
+  -h, --help                help for pgmigrate
+      --log-format string   [PGM_LOGFORMAT] 'text' or 'json', the log line format (default 'text')
+  -m, --migrations string   [PGM_MIGRATIONS] a path to a directory containing *.sql migrations
+      --table-name string   [PGM_TABLENAME] the table name to use to store migration records (default 'pgmigrate_migrations')
+  -v, --version             version for pgmigrate
+
+Use "pgmigrate [command] --help" for more information about a command.
+```  
+
+# Library
+
+## Install
+
+* requires golang 1.18+ because it uses generics. 
+* only depends on stdlib; all dependencies in the go.mod are for tests.
+
+```bash
+# library
+go get github.com/peterldowns/pgmigrate@latest
+```
+
+## Usage
+
+All of the methods available in the CLI are equivalently named and available in
+the library. Please read the cli help with `pgmigrate help <command>` and read
+the [the go.dev docs at pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
+
 
 # FAQ
 
@@ -160,10 +173,25 @@ pgmigrate has the following invariants, rules, and behavior:
   - Editing its contents will cause pgmigrate to show a warning that the hash of the migration differs from the hash of the migration when it was applied.
 - After a migration has been applied you should never delete the migration. If you do, pgmigrate will warn you that a migration that had previously been applied is no longer present.
 
+## Why use pgmigrate instead of the alternatives?
+
+pgmigrate has the following features and benefits:
+
+- your team can merge multiple migrations with the same sequence number (00123_create_a.sql, 00123_update_b.sql).
+- your team can merge multiple migrations "out of order" (merge 00123_create_a.sql, then merge 00121_some_other.sql).
+- your team can dump a human-readable version of your database schema to help with debugging and to prevent schema conflicts while merging PRs.
+- your team can squash migration files to speed up new database creation and reduce complexity.
+- you never need to think about down migrations ever again (you don't use them and they're not necessary).
+- you can see exactly when each migration was applied, and the hash of the file
+  contents of that migration, which helps with auditability and debugging.
+- if a migration fails you can simply edit the file and then redeploy without
+having to perform any manual operations.
+- the full functionality of pgmigrate is available no matter how you choose to use it (cli, embedded library, docker container).
+
 ## How should my team work with it?
 
 ### the migrations directory
-Your team's repository should include a `migrations/` directory containing all known migrations.
+Your team repository should include a `migrations/` directory containing all known migrations.
 
 ```
 migrations
@@ -179,69 +207,35 @@ will mean that when you `ls` the directory, you see the migrations in the same
 order that they will be applied.  Some teams use unix timestamps, others use
 integers, it doesn't matter as long as you're consistent.
 
-### deploying and applying migrations
-You should run pgmigrate with the latest migrations directory each time you
-deploy. Assuming you're running in a modern cloud environment, you're most
-likely doing rolling deployments where new instances of your application are
-brought up before old ones are terminated. Therefore, make sure any new
-migrations will result in a database state that the previous version of your
-application (which will still be running as migrations are applied) can handle.
-For more on this, see [the FAQ below](#).
+### creating a new migration
+Add a new migration by creating a new file in your `migrations/` directory
+ending in `.sql`. The usual work flow is:
+- Create a new feature branch
+- Create a new migration with a sequence number one greater than the most recent migration
+- Edit the migration contents
 
-Because pgmigrate uses advisory locks, you can roll out as many new instances of
-your application as you'd like. Even if multiple instance attempt to run the
-migrations at once, only one will acquire the lock and apply the migrations.
-After its done, the other instances should see that there are no more migrations
-to apply, and continue successfully.
+It is OK for you and another coworker to use the same sequence number. If you
+both choose the exact same filename, git will prevent you from merging both PRs.
 
-Successfully running migrations should be a prerequisite to the new version of
-your application starting up and accepting requests. 
+### what's allowed in a migration
+You can do anything you'd like in a migration except for the following limitations:
 
-### create new migrations
-Unlike other migration libraries, *it is totally fine for migrations to have the
-same prefix*! pgmigrate uses the full name of the file to identify a migration. This makes life a lot easier on a distributed, high-velocity team. Assuming you are using modern
-git and integration tests, you can rely on those processes to prevent conflicting merges.
-
-For instance, assuming the same migrations as above, you can create a new migration `0005_create_squirrels.sql`:
-
-```sql
-CREATE TABLE squirrels (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  species TEXT
-);
-```
-
-One of your coworkers may also create a new migration at this point, and use the same number,
-but do something different &mdash; they call it `0005_new_table_cows.sql`
-
-```sql
-CREATE TABLE cows (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  tippable BOOL,
-  is_tipped BOOL
-);
-```
-
-This is totally fine! You can each merge your PRs, in any order, because they do not conflict.
-Any sequence of merging and deploying and applying migrations will result in the same state, with both tables having been created and both migration files present in the folder:
-
-```
-migrations
-├── 0001_cats.sql
-├── 0003_dogs.sql
-├── 0003_empty.sql
-├── 0004_rm_me.sql
-├── 0005_create_squirrels.sql
-├── 0005_new_table_cows.sql
-```
+- migrations **must not** use transactions (`BEGIN/COMMIT/ROLLBACK`) as pgmigrate will
+run each migration inside of a transaction.
+- migrations **must not** use `CREATE INDEX CONCURRENTLY` as this is guaranteed to fail
+inside of a transaction.
 
 ### preventing conflicts
-You may have just asked yourself, wait, how could that be true? What if two PRs
-merge SQL that conflicts? For instance, let's say two new tables get created,
-one which deletes the `users` table and one which creates a new `houses` table
-with a foreign key pointing to `users`. There's no way both of these migrations
-could be safely applied, and the resulting database state could be different
-depending on the order!
+You may be wondering, how is running "any previously unapplied migration" safe? 
+What if there are two PRs that contain conflicting migrations?
+
+For instance let's say two new tables get created,
+
+- one which deletes the `users` table
+- one which creates a new `houses` table with a foreign key to `users`.
+
+There's no way both of these migrations could be safely applied, and the
+resulting database state could be different depending on the order!
 
 ```
 ├── ...
@@ -249,39 +243,74 @@ depending on the order!
 ├── 0006_bbbb_new_table_with_foreign_key_to_users_table.sql
 ```
 
-Or let's say two new PRs get merged, each of which renames the `user.name`
-field. One which changes `user.name` to `user.full_name`, one which changes
-`user.name` to `user.legal_name`.
+You prevent these conflicts during CI by using pgmigrate to maintain an
+up-to-date dump of your database schema:
 
+```bash
+# schema.sql should be checked in to your repository, and CI should enforce that
+# it is up to date. The easiest way to do this is to spin up a database, apply
+# the migrations, and run the dump command.  Then, error if there are any
+# changes detected:
+pgmigrate dump -o schema.sql
 ```
-├── ...
-├── 0007_rename_user_name_to_fullname.sql
-├── 0007_rename_user_name_to_legal_name.sql
-```
 
-Oh my god, isn't this a huge problem? Uh, no:
+You should also make sure to run a CI check on your main/dev branch that creates
+a new database and applies all known migrations. This check should block
+deploying until it succeeds.
 
-1. Once the second (conflicting) migration is merged, your CI tests should fail
+Returning to the example of two conflicting migrations being merged, we can see
+how these guards provide a good developer experience and prevent a broken
+migration from being deployed:
+
+1. One of the two migrations is merged. The second branch should not be able to be merged
+because the dumped schema.sql will contain a merge conflict.
+2. If for some reason both of the migrations are able to be merged, the check on
+the main/dev branch will fail to apply migrations and block the deploy.
 because the migrations cannot be applied. Breaking main is annoying, but...
-2. You will never intentionally do something like this. Even in distributed
-teams, people coordinate work and it is exceedingly unlikely to have multiple
-changes happening at once that have conflicting migrations.
 
-Unconvinced? What if I pinky promised? OK, let's say you're still worried. Use
-git to guarantee that you never have a problem by turning schema conflicts into
-unmergeable file conflicts:
+Lastly, you should expect this situation to happen only rarely. Most teams, even
+with large numbers of developers working in parallel, coordinate changes to
+shared tables such that conflicting schema changes are a rare event.
 
-- Add a `schema.sql` file somewhere in your repo that contains a dump of your database schema generated with `pgmigrate dump -o schema.sql`
-- Make an easy script for applying migrations and then dumping the resulting schema to `schema.sql` so developers can do it as they work.
-- In CI, run the migrations and use that script to make sure `schema.sql` is up
-to date. If running the script in CI causes any changes to the file, fail, and
-ask the developer to redump the schema.
+### deploying and applying migrations
+You should run pgmigrate with the latest migrations directory each time you
+deploy. You can do this by:
 
-This will mean that `schema.sql` stays up to date as developers write new
-migrations. If two developers write migrations that cause conflicting schema
-updates, they won't be able to merge because it will be a git conflict.
+- using pgmigrate as a golang library, and calling `pgmigrate.Migrate(...)` 
+  when your application starts
+- using pgmigrate as a cli or as a docker init container and applying
+  migrations before your application starts.
 
-## How to squash your migrations
+Your application should fail to start if migrations fail for any reason.
+
+Your application should start successfully if there are verification errors or
+warnings, but you should treat those errors as a sign there is a difference
+between the expected database state and the schema as defined by your migration
+files.
+
+Because pgmigrate uses advisory locks, you can roll out as many new instances of
+your application as you'd like. Even if multiple instance attempt to run the
+migrations at once, only one will acquire the lock and apply the migrations. The
+other instances will wait for it to succeed and then no-op.
+
+### backwards compatibility
+Assuming you're running in a modern cloud environment, you're most
+likely doing rolling deployments where new instances of your application are
+brought up before old ones are terminated. Therefore, make sure any new
+migrations will result in a database state that the previous version of your
+application (which will still be running as migrations are applied) can handle.
+
+### squashing migrations
+
+At some point, if you have hundreds or thousands of migration files, you may
+want to replace them with a single migration file that achieves the same thing.
+You may want this because:
+
+- creating a new dev or test database and applying migrations will be faster if
+there are fewer migrations to run.
+- having so many migration files makes it annoying to add new migrations
+- having so many migration files gives lots of out-of-date results when
+searching for sql tables/views/definitions.
 
 This process will involve manually updating the migrations table of your
 staging/production databases. Your coworkers will need to recreate their
@@ -362,3 +391,23 @@ I'd like to thank and acknowledge:
   implement `pgmigrate dump`.
 - The backend team at Pipe for helping test and validate this project's
   assumptions, utility, and implementation.
+
+# Future Work / TODOs
+
+- [ ] Library
+  - [ ] More tests for the schema handling stuff
+  - [ ] Generally clean up the code
+- [ ] Readme
+  - [ ] example of using pgtestdb
+  - [ ] discussion of large/long-running migrations
+- [ ] Wishlist
+  - [ ] make `*Result` diffable, allow generating migration from current state of database.
+    - for now, just use [https://github.com/djrobstep/migra](https://github.com/djrobstep/migra)
+  - [ ] some kind of built-inlinting
+    - maybe using https://github.com/auxten/postgresql-parser
+    - BEGIN/COMMIT/ROLLBACK
+    - serial vs. identity
+    - pks / fks with indexes
+    - uppercase / mixed case
+    - https://squawkhq.com/
+    - https://github.com/sqlfluff/sqlfluff
