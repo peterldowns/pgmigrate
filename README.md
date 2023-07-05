@@ -37,9 +37,23 @@ goal is to make migrations as simple and reliable as possible.
 
 #### Homebrew:
 ```bash
-# TODO: not yet published
 # install it
-# brew install peterldowns/tap/pgmigrate
+brew install peterldowns/tap/pgmigrate
+```
+
+#### Manually download binaries
+Visit [the latest Github release](https://github.com/peterldowns/pgmigrate/releases/latest) and pick the appropriate binary. Or, click one of the shortcuts here:
+- [darwin-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-amd64)
+- [darwin-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-arm64)
+- [linux-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-amd64)
+- [linux-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-arm64)
+
+#### Nix (flakes):
+```bash
+# run it
+nix run github:peterldowns/pgmigrate -- --help
+# install it
+nix profile install --refresh github:peterldowns/pgmigrate
 ```
 
 #### Docker:
@@ -57,21 +71,6 @@ docker run -it --rm \
   ghcr.io/peterldowns/pgmigrate:latest \
   pgmigrate plan
 ```
-#### Nix (flakes):
-```bash
-# run it
-nix run github:peterldowns/pgmigrate -- --help
-# install it
-nix profile install --refresh github:peterldowns/pgmigrate
-```
-
-#### Manually download binaries
-Visit [the latest Github release](https://github.com/peterldowns/pgmigrate/releases/latest) and pick the appropriate binary. Or, click one of the shortcuts here:
-- [darwin-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-amd64)
-- [darwin-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-arm64)
-- [linux-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-amd64)
-- [linux-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-linux-arm64)
-
 
 ## Usage
 
