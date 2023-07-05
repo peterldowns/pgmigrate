@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/log v0.2.2
 	github.com/fatih/color v1.15.0
 	github.com/jackc/pgx/v5 v5.3.1
-	github.com/peterldowns/pgmigrate v0.0.4
+	github.com/peterldowns/pgmigrate v0.0.5
 	github.com/spf13/cobra v1.7.0
 	gopkg.in/yaml.v3 v3.0.1
 )
