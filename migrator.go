@@ -34,6 +34,7 @@ type Executor interface {
 }
 
 // Migrator should be instantiated with [NewMigrator] rather than used directly.
+// It contains the state necessary to perform migrations-related operations.
 type Migrator struct {
 	// Migrations is the full set of migrations that describe the desired state
 	// of the database.
@@ -137,6 +138,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *sql.DB) ([]VerificationError
 	})
 }
 
+// ensureMigrationsTable will create the migrations table if it does not exist.
 func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error {
 	m.info(ctx, "ensuring migrations table exists", LogField{Key: "table_name", Value: m.TableName})
 	query := fmt.Sprintf(`
@@ -151,6 +153,8 @@ func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error
 	return err
 }
 
+// hasMigrationsTable returns true if the migrations table exists, false
+// otherwise.
 func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, error) {
 	query := fmt.Sprintf(`
 				SELECT EXISTS (
@@ -166,6 +170,46 @@ func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, e
 	return exists, nil
 }
 
+// Plan shows which migrations, if any, would be applied, in the order that they
+// would be applied in.
+//
+// The plan will be a list of [Migration]s that are present in the migrations
+// directory that have not yet been marked as applied in the migrations table.
+//
+// The migrations in the plan will be ordered by their IDs, in ascending
+// lexicographical order. This is the same order that you see if you use "ls".
+// This is also the same order that they will be applied in.
+//
+// The ID of a migration is its filename without the ".sql" suffix.
+//
+// A migration will only ever be applied once. Editing the contents of the
+// migration file will NOT result in it being re-applied. Instead, you will see a
+// verification error warning that the contents of the migration differ from its
+// contents when it was previously applied.
+//
+// Migrations can be applied "out of order". For instance, if there were three
+// migrations that had been applied:
+//
+//   - 001_initial
+//   - 002_create_users
+//   - 003_create_viewers
+//
+// And a new migration "002_create_companies" is merged:
+//
+//   - 001_initial
+//   - 002_create_companies
+//   - 002_create_users
+//   - 003_create_viewers
+//
+// Running "pgmigrate plan" will show:
+//
+//   - 002_create_companies
+//
+// Because the other migrations have already been applied. This is by design; most
+// of the time, when you're working with your coworkers, you will not write
+// migrations that conflict with each other. As long as you use a migration
+// name/number higher than that of any dependencies, you will not have any
+// problems.
 func (m *Migrator) Plan(ctx context.Context, db Executor) ([]Migration, error) {
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
@@ -186,7 +230,11 @@ func (m *Migrator) Plan(ctx context.Context, db Executor) ([]Migration, error) {
 	return plan, nil
 }
 
-// Applied retrieves all data from the migrations tracking table
+// Applied returns a list of [AppliedMigration]s in the order that they were
+// applied in (applied_at ASC, id ASC).
+//
+// If there are no applied migrations, or the specified table does not exist,
+// this will return an empty list without an error.
 func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration, error) {
 	hasMigrations, err := m.hasMigrationsTable(ctx, db)
 	if err != nil {
@@ -281,7 +329,25 @@ func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Mi
 	})
 }
 
-// Verify will detect and return any verification errors.
+// Verify returns a list of [VerificationError]s with warnings for any migrations that:
+//
+//   - Are marked as applied in the database table but do not exist in the
+//     migrations directory.
+//   - Have a different checksum in the database than the current file hash.
+//
+// These warnings usually signify that the schema described by the migrations no longer
+// matches the schema in the database. Usually the cause is removing/editing a migration
+// without realizing that it was already applied to a database.
+//
+// The most common cause of a warning is in the case that a new
+// release/deployment contains migrations, the migrations are applied
+// successfully, but the release is then rolled back due to other issues.  In
+// this case the warning is just that, a warning, and should not be a long-term
+// problem.
+//
+// These warnings should not prevent your application from starting, but are
+// worth showing to a human devops/db-admin/sre-type person for them to
+// investigate.
 func (m *Migrator) Verify(ctx context.Context, db Executor) ([]VerificationError, error) {
 	migrations := m.Migrations
 	applied, err := m.Applied(ctx, db)

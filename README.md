@@ -56,6 +56,16 @@ nix run github:peterldowns/pgmigrate -- --help
 nix profile install --refresh github:peterldowns/pgmigrate
 ```
 
+#### Golang:
+The golang-installed binaries will not be built with version information.
+
+```bash
+# run it
+go run github.com/peterldowns/pgmigrate/cli@latest -- --help
+# install it
+go install github.com/peterldowns/pgmigrate/cli@latest
+```
+
 #### Docker:
 ```bash
 # The default CMD is "pgmigrate" which just shows the help screen.
@@ -72,6 +82,60 @@ docker run -it --rm \
   pgmigrate plan
 ```
 
+## Configuration
+
+pgmigrate reads its configuration from cli flags, environment variables, and a
+configuration file, in that order.
+
+pgmigrate will look in the following locations for a configuration file:
+
+- If you passed `--configfile <aaa>`, then it reads `<aaa>`
+- If you defined `PGM_CONFIGFILE=<bbb>`, then it reads `<bbb>`
+- If your current directory has a `.pgmigrate.yaml` file,
+  it reads `$(pwd)/.pgmigrate.yaml`
+- If the root of your current git repo has a `.pgmigrate.yaml` file,
+  it reads `$(git_repo_root)/.pgmigrate.yaml`
+
+Here's an example configuration file. All keys are optional, an empty file is
+also a valid configuration.
+
+```yaml
+# connection string to a database to manage
+database: "postgres://postgres:password@localhost:5433/postgres"
+# path to the folder of migration files. if this is relative,
+# it is treated as relative to wherever the "pgmigrate" command
+# is invoked, NOT as relative to this config file.
+migrations: "./tmp/migrations"
+# the name of the table to use for storing migration records.  you can give
+# this in the form "table" to use your database's default schema, or you can
+# give this in the form "schema.table" to explicitly set the schema.
+table_name: "custom_schema.custom_table"
+# this key configures the "dump" command.
+schema:
+  # the name of the schema to dump, defaults to "public"
+  name: "public"
+  # any explicit dependencies between database objects that are
+  # necessary for the dumped schema to apply successfully.
+  dependencies:
+    some_view: # depends on
+      - some_function
+      - some_table
+    some_table: # depends on
+      - another_table
+  # any tables for which the dump should contain INSERT statements to create
+  # actual data/rows. this is useful for enums or other tables full of
+  # ~constants.
+  data:
+    - name: "%_enum" # accepts wildcards using SQL query syntax
+    - name: "my_example_table" # can also be a literal
+      # if not specified, defaults to "*"
+      columns:
+        - "value"
+        - "comment"
+      # a valid SQL order clause to use to order the rows in the INSERT
+      # statement.
+      order_by: "value asc"
+```
 ## Usage
 
 The CLI ships with documentation and examples built in, please see `pgmigrate
@@ -138,7 +202,7 @@ go get github.com/peterldowns/pgmigrate@latest
 ## Usage
 
 All of the methods available in the CLI are equivalently named and available in
-the library. Please read the cli help with `pgmigrate help <command>` and read
+the library. Please read the cli help with `pgmigrate help <command>` or read
 the [the go.dev docs at pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
 
 

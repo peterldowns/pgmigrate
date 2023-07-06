@@ -22,6 +22,7 @@ directory that have not yet been marked as applied in the migrations table.
 
 The migrations in the plan will be ordered by their IDs, in ascending
 lexicographical order. This is the same order that you see if you use "ls".
+This is also the same order that they will be applied in.
 
 The ID of a migration is its filename without the ".sql" suffix.
 

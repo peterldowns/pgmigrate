@@ -18,8 +18,10 @@ pgmigrate will look in the following locations for a configuration file:
 
 - If you passed "--configfile <aaa>", then it reads "<aaa>"
 - If you defined "PGM_CONFIGFILE=<bbb>", then it reads "<bbb>"
-- If it exists, it reads "$(pwd)/.pgmigrate.yaml"
-- If it exists, it reads "$(git_repo_root)/.pgmigrate.yaml"
+- If your current directory has a ".pgmigrate.yaml" file,
+  it reads "$(pwd)/.pgmigrate.yaml"
+- If the root of your current git repo has a ".pgmigrate.yaml" file,
+  it reads "$(git_repo_root)/.pgmigrate.yaml"
 
 Here's an example configuration file. All keys are optional, an empty file is
 also a valid configuration.
@@ -41,7 +43,7 @@ also a valid configuration.
       # any explicit dependencies between database objects that are
       # necessary for the dumped schema to apply successfully.
       dependencies:
-        some_view: # depends on 
+        some_view: # depends on
           - some_function
           - some_table
         some_table: # depends on

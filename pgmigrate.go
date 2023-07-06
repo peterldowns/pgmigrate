@@ -100,6 +100,25 @@ func Migrate(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]Verif
 	return migrator.Migrate(ctx, db)
 }
 
+// Verify returns a list of [VerificationError]s with warnings for any migrations that:
+//
+//   - Are marked as applied in the database table but do not exist in the
+//     migrations directory.
+//   - Have a different checksum in the database than the current file hash.
+//
+// These warnings usually signify that the schema described by the migrations no longer
+// matches the schema in the database. Usually the cause is removing/editing a migration
+// without realizing that it was already applied to a database.
+//
+// The most common cause of a warning is in the case that a new
+// release/deployment contains migrations, the migrations are applied
+// successfully, but the release is then rolled back due to other issues.  In
+// this case the warning is just that, a warning, and should not be a long-term
+// problem.
+//
+// These warnings should not prevent your application from starting, but are
+// worth showing to a human devops/db-admin/sre-type person for them to
+// investigate.
 func Verify(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]VerificationError, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -110,6 +129,46 @@ func Verify(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]Verifi
 	return migrator.Verify(ctx, db)
 }
 
+// Plan shows which migrations, if any, would be applied, in the order that they
+// would be applied in.
+//
+// The plan will be a list of [Migration]s that are present in the migrations
+// directory that have not yet been marked as applied in the migrations table.
+//
+// The migrations in the plan will be ordered by their IDs, in ascending
+// lexicographical order. This is the same order that you see if you use "ls".
+// This is also the same order that they will be applied in.
+//
+// The ID of a migration is its filename without the ".sql" suffix.
+//
+// A migration will only ever be applied once. Editing the contents of the
+// migration file will NOT result in it being re-applied. Instead, you will see a
+// verification error warning that the contents of the migration differ from its
+// contents when it was previously applied.
+//
+// Migrations can be applied "out of order". For instance, if there were three
+// migrations that had been applied:
+//
+//   - 001_initial
+//   - 002_create_users
+//   - 003_create_viewers
+//
+// And a new migration "002_create_companies" is merged:
+//
+//   - 001_initial
+//   - 002_create_companies
+//   - 002_create_users
+//   - 003_create_viewers
+//
+// Running "pgmigrate plan" will show:
+//
+//   - 002_create_companies
+//
+// Because the other migrations have already been applied. This is by design; most
+// of the time, when you're working with your coworkers, you will not write
+// migrations that conflict with each other. As long as you use a migration
+// name/number higher than that of any dependencies, you will not have any
+// problems.
 func Plan(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]Migration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -120,6 +179,11 @@ func Plan(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]Migratio
 	return migrator.Plan(ctx, db)
 }
 
+// Applied returns a list of [AppliedMigration]s in the order that they were
+// applied in (applied_at ASC, id ASC).
+//
+// If there are no applied migrations, or the specified table does not exist,
+// this will return an empty list without an error.
 func Applied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -130,6 +194,14 @@ func Applied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]Appli
 	return migrator.Applied(ctx, db)
 }
 
+// MarkApplied (⚠️ danger) is a manual operation that marks specific migrations
+// as applied without running them.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// applied.
 func MarkApplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, ids ...string) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -140,6 +212,14 @@ func MarkApplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, ids 
 	return migrator.MarkApplied(ctx, db, ids...)
 }
 
+// MarkAllApplied (⚠️ danger) is a manual operation that marks all known migrations as
+// applied without running them.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// applied.
 func MarkAllApplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -150,6 +230,15 @@ func MarkAllApplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) (
 	return migrator.MarkAllApplied(ctx, db)
 }
 
+// MarkUnapplied (⚠️ danger) is a manual operation that marks specific migrations as
+// unapplied (not having been run) by removing their records from the migrations
+// table.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// unapplied.
 func MarkUnapplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, ids ...string) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -160,6 +249,15 @@ func MarkUnapplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, id
 	return migrator.MarkUnapplied(ctx, db, ids...)
 }
 
+// MarkAllUnapplied (⚠️ danger) is a manual operation that marks all known migrations as
+// unapplied (not having been run) by removing their records from the migrations
+// table.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// unapplied.
 func MarkAllUnapplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -170,6 +268,14 @@ func MarkAllUnapplied(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger)
 	return migrator.MarkAllUnapplied(ctx, db)
 }
 
+// SetChecksums (⚠️ danger) is a manual operation that explicitly sets the recorded
+// checksum of applied migrations in the migrations table.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s whose checksums have been
+// updated.
 func SetChecksums(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, updates ...ChecksumUpdate) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -180,6 +286,15 @@ func SetChecksums(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, upd
 	return migrator.SetChecksums(ctx, db, updates...)
 }
 
+// RecalculateChecksums (⚠️ danger) is a manual operation that explicitly
+// recalculates the checksums of the specified migrations and updates their
+// records in the migrations table to have the calculated checksum.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s whose checksums have been
+// recalculated.
 func RecalculateChecksums(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger, ids ...string) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {
@@ -190,6 +305,15 @@ func RecalculateChecksums(ctx context.Context, db *sql.DB, dir fs.FS, logger Log
 	return migrator.RecalculateChecksums(ctx, db, ids...)
 }
 
+// RecalculateChecksums (⚠️ danger) is a manual operation that explicitly
+// recalculates the checksums of all known migrations and updates their records
+// in the migrations table to have the calculated checksum.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s whose checksums have been
+// recalculated.
 func RecalculateAllChecksums(ctx context.Context, db *sql.DB, dir fs.FS, logger Logger) ([]AppliedMigration, error) {
 	migrations, err := Load(dir)
 	if err != nil {

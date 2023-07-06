@@ -9,6 +9,14 @@ import (
 	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
+// MarkApplied (⚠️ danger) is a manual operation that marks specific migrations
+// as applied without running them.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// applied.
 func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
 	hasMigrations, err := m.hasMigrationsTable(ctx, db)
 	if err != nil {
@@ -80,6 +88,14 @@ func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) 
 	return markedAsApplied, nil
 }
 
+// MarkAllApplied (⚠️ danger) is a manual operation that marks all known migrations as
+// applied without running them.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// applied.
 func (m *Migrator) MarkAllApplied(ctx context.Context, db Executor) ([]AppliedMigration, error) {
 	var ids []string
 	for _, migration := range m.Migrations {
@@ -88,6 +104,15 @@ func (m *Migrator) MarkAllApplied(ctx context.Context, db Executor) ([]AppliedMi
 	return m.MarkApplied(ctx, db, ids...)
 }
 
+// MarkUnapplied (⚠️ danger) is a manual operation that marks specific migrations as
+// unapplied (not having been run) by removing their records from the migrations
+// table.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// unapplied.
 func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
 	hasMigrations, err := m.hasMigrationsTable(ctx, db)
 	if err != nil {
@@ -132,6 +157,15 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string
 	return removed, err
 }
 
+// MarkAllUnapplied (⚠️ danger) is a manual operation that marks all known migrations as
+// unapplied (not having been run) by removing their records from the migrations
+// table.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s that have been marked as
+// unapplied.
 func (m *Migrator) MarkAllUnapplied(ctx context.Context, db Executor) ([]AppliedMigration, error) {
 	hasMigrations, err := m.hasMigrationsTable(ctx, db)
 	if err != nil {
@@ -151,11 +185,22 @@ func (m *Migrator) MarkAllUnapplied(ctx context.Context, db Executor) ([]Applied
 	return m.MarkUnapplied(ctx, db, ids...)
 }
 
+// ChecksumUpdate represents an update to a specific migration.
+// This struct is used instead of a `map[migrationID]checksum“
+// in order to apply multiple updates in a consistent order.
 type ChecksumUpdate struct {
-	MigrationID string
-	NewChecksum string
+	MigrationID string // The ID of the migration to update, `0001_initial`
+	NewChecksum string // The checksum to set in the migrations table, `aaaabbbbccccdddd`
 }
 
+// SetChecksums (⚠️ danger) is a manual operation that explicitly sets the recorded
+// checksum of applied migrations in the migrations table.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s whose checksums have been
+// updated.
 func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...ChecksumUpdate) ([]AppliedMigration, error) {
 	hasMigrations, err := m.hasMigrationsTable(ctx, db)
 	if err != nil {
@@ -221,6 +266,15 @@ func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...Che
 	return updated, nil
 }
 
+// RecalculateChecksums (⚠️ danger) is a manual operation that explicitly
+// recalculates the checksums of the specified migrations and updates their
+// records in the migrations table to have the calculated checksum.
+//
+// You should NOT use this as part of normal operations, it exists to help
+// devops/db-admin/sres interact with migration state.
+//
+// It returns a list of the [AppliedMigration]s whose checksums have been
+// recalculated.
 func (m *Migrator) RecalculateChecksums(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
 	allChecksums := make(map[string]string, len(m.Migrations))
 	for _, migration := range m.Migrations {
