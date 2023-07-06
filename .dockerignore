@@ -3,5 +3,6 @@
 !**/*.sum
 !**/*.mod
 !**/*.work
+!example/**
 !internal/**
 !cli/**
