@@ -228,22 +228,33 @@ inside of a transaction.
 You may be wondering, how is running "any previously unapplied migration" safe? 
 What if there are two PRs that contain conflicting migrations?
 
-For instance let's say two new tables get created,
+For instance let's say two new migrations get created,
 
-- one which deletes the `users` table
-- one which creates a new `houses` table with a foreign key to `users`.
+- `0006_aaa_delete_users.sql`, which deletes the `users` table
+- `0006_bbb_create_houses.sql`, which creates a new `houses` table with a foreign key to `users`.
+
+```
+├── ...
+├── 0006_aaa_delete_users.sql
+├── 0006_bbb_create_houses.sql
+```
 
 There's no way both of these migrations could be safely applied, and the
 resulting database state could be different depending on the order!
 
-```
-├── ...
-├── 0006_aaaa_delete_users_table.sql
-├── 0006_bbbb_new_table_with_foreign_key_to_users_table.sql
-```
+- If `0006_aaa_delete_users.sql` is merged and applied first, then
+  `0006_bbb_create_houses.sql` is guaranteed to fail because there is no longer
+  a `users` table to reference in the foreign key.
+- If `0006_bbb_create_houses.sql` is merged and applied first, then
+  `0006_aaa_delete_users.sql` will either fail (because it cannot delete the
+  users table) or result in the deletion of the houses table as well (in the
+  case of `ON DELETE CASCADE` on the foreign key).
 
-You prevent these conflicts during CI by using pgmigrate to maintain an
-up-to-date dump of your database schema:
+
+You can prevent this conflict at CI-time by using pgmigrate to maintain an
+up-to-date dump of your database schema. This schema dump will cause a git
+merge conflict so that only one of the migrations can be merged, and the second
+will force the developer to update the PR and the migration:
 
 ```bash
 # schema.sql should be checked in to your repository, and CI should enforce that
