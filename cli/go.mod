@@ -5,8 +5,8 @@ go 1.18
 require (
 	github.com/charmbracelet/log v0.2.2
 	github.com/fatih/color v1.15.0
-	github.com/jackc/pgx/v5 v5.3.1
-	github.com/peterldowns/pgmigrate v0.0.5
+	github.com/jackc/pgx/v5 v5.4.1
+	github.com/peterldowns/pgmigrate v0.0.6
 	github.com/spf13/cobra v1.7.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -29,8 +29,8 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.6.0 // indirect
-	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 )

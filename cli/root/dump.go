@@ -90,7 +90,14 @@ diff schema.sql another.sql # should show no differences
 		}
 		contents := parsed.String()
 
-		fout := *DumpFlags.Out
+		if *DumpFlags.Out != "" {
+			config.Schema.Out = *DumpFlags.Out
+		}
+		if config.Schema.Out == "" {
+			config.Schema.Out = "-"
+		}
+
+		fout := config.Schema.Out
 		if fout == "-" || fout == "" {
 			fmt.Println(contents)
 		} else {
@@ -106,7 +113,7 @@ diff schema.sql another.sql # should show no differences
 }
 
 func init() {
-	DumpFlags.Out = dumpCmd.Flags().StringP("out", "o", "-", "path to write the schema to")
+	DumpFlags.Out = dumpCmd.Flags().StringP("out", "o", "", "path to write the schema to, '-' means stdout")
 	DumpFlags.Schema = dumpCmd.Flags().StringP(
 		"schema",
 		"s",

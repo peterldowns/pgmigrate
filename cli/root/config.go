@@ -40,6 +40,10 @@ also a valid configuration.
     schema:
       # the name of the schema to dump, defaults to "public"
       name: "public"
+      # the file to which to write the dump, defaults to "-" (stdout)
+      # if this is relative, it is treated as relative to wherever the
+      # "pgmigrate" command is invoked, NOT as relative to this config file.
+      file: "./schema.sql"
       # any explicit dependencies between database objects that are
       # necessary for the dumped schema to apply successfully.
       dependencies:
