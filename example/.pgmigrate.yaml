@@ -1,0 +1,7 @@
+database: "postgres://appuser:verysecret@localhost:5435/exampleapp"
+migrations: "./migrations"
+schema:
+  out: "./schema.sql"
+  name: "public"
+  data:
+    - name: "%_enum"
