@@ -40,7 +40,7 @@
             #
             # (Yes, that's really how you're expected to do this.)
             #vendorSha256 = pkgs.lib.fakeSha256;
-            vendorSha256 = "sha256-Yl1GqpolYrcGb0ImMg8RDR7gYi7LHR29sh/ufGAOHt8";
+            vendorSha256 = "sha256-IvdXMA5WBnJ9zGxSahG3Z+BXHtD4/C3tqe627QQkxwk=";
             GOWORK = "off";
             postInstall = ''
               mv $out/bin/cli $out/bin/pgmigrate
