@@ -9,9 +9,14 @@ import (
 const DefaultSchema = "public"
 
 type Config struct {
-	Schema       string              `yaml:"name"`
+	// The name of the schema whose contents should be dumped.
+	Schema string `yaml:"name"`
+	// The name of the file to which the dump should be written.
+	Out string `yaml:"out"`
+	// Any explicit dependencies between database objects.
 	Dependencies map[string][]string `yaml:"dependencies"`
-	Data         []Data              `yaml:"data"`
+	// Rules for dumping table data in the form of INSERT statements.
+	Data []Data `yaml:"data"`
 }
 
 type Schema struct {
@@ -27,10 +32,10 @@ type Schema struct {
 	Indexes       []*Index
 	Constraints   []*Constraint
 	Triggers      []*Trigger
+	Data          []*Data
 	// Metadata that isn't explicitly dumped.
 	Config       Config
 	Dependencies []*Dependency
-	Data         []*Data
 }
 
 func Parse(config Config, db *sql.DB) (*Schema, error) {

@@ -1,6 +1,6 @@
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.0.5/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.0.6/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 pgmigrate is a modern Postgres migrations CLI and golang library. It is
@@ -30,6 +30,17 @@ goal is to make migrations as simple and reliable as possible.
   meaningful docstring, so you should be able to explore it quite easily using
   an LSP plugin or by reading the code in Github or in your local editor.
 - You may also refer to [the go.dev docs, pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
+
+# Quickstart Example
+
+[Please visit the `./example` directory](./example/) for a working example of
+how to use pgmigrate. This example demonstrates:
+
+- Using the CLI
+- Creating and applying new migrations
+- Dumping your schema to a file
+- Using pgmigrate as an embedded library to run migrations on startup
+- Writing extremely fast database-backed tests
 
 # CLI
 
@@ -114,6 +125,10 @@ table_name: "custom_schema.custom_table"
 schema:
   # the name of the schema to dump, defaults to "public"
   name: "public"
+  # the file to which to write the dump, defaults to "-" (stdout)
+  # if this is relative, it is treated as relative to wherever the
+  # "pgmigrate" command is invoked, NOT as relative to this config file.
+  file: "./schema.sql"
   # any explicit dependencies between database objects that are
   # necessary for the dumped schema to apply successfully.
   dependencies:
@@ -204,7 +219,6 @@ go get github.com/peterldowns/pgmigrate@latest
 All of the methods available in the CLI are equivalently named and available in
 the library. Please read the cli help with `pgmigrate help <command>` or read
 the [the go.dev docs at pkg.go.dev/github.com/peterldowns/pgmigrate](https://pkg.go.dev/github.com/peterldowns/pgmigrate).
-
 
 # FAQ
 

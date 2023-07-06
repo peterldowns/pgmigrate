@@ -34,7 +34,16 @@ tag:
   #!/usr/bin/env zsh
   raw="$(cat VERSION)"
   git tag "$raw"
+
+tag-cli:
+  #!/usr/bin/env zsh
+  raw="$(cat VERSION)"
   git tag "cli/$raw"
+
+tag-example:
+  #!/usr/bin/env zsh
+  raw="$(cat VERSION)"
+  git tag "example/$raw"
 
 tidy:
   #!/usr/bin/env zsh

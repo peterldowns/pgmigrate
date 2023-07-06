@@ -24,7 +24,7 @@ func identifier(parts ...string) string {
 	out := make([]string, 0, len(parts))
 	for _, s := range parts {
 		lowered := strings.ToLower(s)
-		if lowered == s {
+		if lowered == s && !strings.ContainsRune(s, '"') {
 			out = append(out, s)
 		} else {
 			out = append(out, pgtools.QuoteIdentifier(s))

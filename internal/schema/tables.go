@@ -133,7 +133,7 @@ CREATE TABLE %s (
 }
 
 func (t *Table) columnDef(c *Column, primaryKey bool, unique bool) string { //nolint:revive // ignore control coupling
-	def := fmt.Sprintf("%s %s", pgtools.QuoteIdentifier(c.Name), c.DataType)
+	def := fmt.Sprintf("%s %s", identifier(c.Name), c.DataType)
 	if primaryKey {
 		def = fmt.Sprintf("%s PRIMARY KEY", def)
 	} else if unique {
