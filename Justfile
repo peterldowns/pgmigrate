@@ -15,14 +15,14 @@ default:
 build:
   #!/usr/bin/env bash
   ldflags=$(./scripts/golang-ldflags.sh)
-  go build -ldflags "$ldflags" -o bin/pgmigrate ./cli
+  go build -ldflags "$ldflags" -o bin/pgmigrate ./cmd/pgmigrate
 
 # test all packages
-test *args='./... ./cli/...':
+test *args='./... ./cmd/pgmigrate/...':
   go test -race -count=1 $@
 
 # lint pgmigrate
-lint *args='./... ./cli/...':
+lint *args='./... ./cmd/pgmigrate/...':
   golangci-lint run --fix --config .golangci.yaml $@
 
 # lint nix files
@@ -38,7 +38,7 @@ tag:
 tag-cli:
   #!/usr/bin/env zsh
   raw="$(cat VERSION)"
-  git tag "cli/$raw"
+  git tag "cmd/pgmigrate/$raw"
 
 tag-example:
   #!/usr/bin/env zsh
@@ -48,7 +48,8 @@ tag-example:
 tidy:
   #!/usr/bin/env zsh
   go mod tidy
-  pushd cli && go mod tidy && popd
+  pushd cmd/pgmigrate && go mod tidy && popd
+  pushd example && go mod tidy && popd
   rm -rf go.work.sum
   go mod tidy
   go work sync

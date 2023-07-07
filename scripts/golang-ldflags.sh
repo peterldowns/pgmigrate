@@ -20,5 +20,5 @@ if [ -z "$COMMIT" ]; then
   COMMIT="$(git rev-parse --short HEAD || echo 'unknown')"
 fi
 
-package="github.com/peterldowns/pgmigrate/cli/shared"
+package="github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared"
 echo "-X $package.Version=$VERSION -X $package.Commit=$COMMIT"

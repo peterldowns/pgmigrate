@@ -14,10 +14,10 @@ ENV CGO_ENABLED=1
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
-RUN mkdir -p cli
-COPY cli/go.mod cli
-COPY cli/go.sum cli
-RUN cd cli && go mod download
+RUN mkdir -p cmd/pgmigrate
+COPY cmd/pgmigrate/go.mod cmd/pgmigrate
+COPY cmd/pgmigrate/go.sum cmd/pgmigrate
+RUN cd cmd/pgmigrate && go mod download
 
 # Build the application
 COPY . .
@@ -32,9 +32,9 @@ ENV PGM_VERSION=$VERSION
 ENV PGM_COMMIT_SHA=$COMMIT_SHA
 
 RUN go build \
-  -ldflags "-X github.com/peterldowns/pgmigrate/cli/shared.Version=${PGM_VERSION} -X github.com/peterldowns/pgmigrate/cli/shared.Commit=${PGM_COMMIT_SHA}" \
+  -ldflags "-X github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared.Version=${PGM_VERSION} -X github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared.Commit=${PGM_COMMIT_SHA}" \
   -o /dist/pgmigrate \
-  ./cli
+  ./cmd/pgmigrate
 
 # App Stage
 FROM alpine:3.16.3 as app

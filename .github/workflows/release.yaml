@@ -22,7 +22,7 @@ jobs:
     - name: release-darwin-amd64
       run: |
         ldflags=$(./scripts/golang-ldflags.sh)
-        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-darwin-amd64 ./cli
+        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-darwin-amd64 ./cmd/pgmigrate
         upload_url=$(./scripts/upsert-gh-release.sh)
         curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN}}" \
           -H "Content-Type: application/octet-stream" \
@@ -36,7 +36,7 @@ jobs:
     - name: release-darwin-arm64
       run: |
         ldflags=$(./scripts/golang-ldflags.sh)
-        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-darwin-arm64 ./cli
+        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-darwin-arm64 ./cmd/pgmigrate
         upload_url=$(./scripts/upsert-gh-release.sh)
         curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Content-Type: application/octet-stream" \
@@ -50,7 +50,7 @@ jobs:
     - name: release-linux-arm64
       run: |
         ldflags=$(./scripts/golang-ldflags.sh)
-        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-linux-arm64 ./cli
+        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-linux-arm64 ./cmd/pgmigrate
         upload_url=$(./scripts/upsert-gh-release.sh)
         curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Content-Type: application/octet-stream" \
@@ -64,7 +64,7 @@ jobs:
     - name: release-linux-amd64
       run: |
         ldflags=$(./scripts/golang-ldflags.sh)
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-linux-amd64 ./cli
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$ldflags" -o ./bin/pgmigrate-linux-amd64 ./cmd/pgmigrate
         upload_url=$(./scripts/upsert-gh-release.sh)
         curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Content-Type: application/octet-stream" \
