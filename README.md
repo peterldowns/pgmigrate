@@ -52,7 +52,7 @@ how to use pgmigrate. This example demonstrates:
 brew install peterldowns/tap/pgmigrate
 ```
 
-#### Manually download binaries
+#### Download a binary:
 Visit [the latest Github release](https://github.com/peterldowns/pgmigrate/releases/latest) and pick the appropriate binary. Or, click one of the shortcuts here:
 - [darwin-amd64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-amd64)
 - [darwin-arm64](https://github.com/peterldowns/pgmigrate/releases/latest/download/pgmigrate-darwin-arm64)
@@ -67,17 +67,13 @@ nix run github:peterldowns/pgmigrate -- --help
 nix profile install --refresh github:peterldowns/pgmigrate
 ```
 
-#### Golang:
-The golang-installed binaries will not be built with version information.
-
-```bash
-# run it
-go run github.com/peterldowns/pgmigrate/cli@latest -- --help
-# install it
-go install github.com/peterldowns/pgmigrate/cli@latest
-```
-
 #### Docker:
+The prebuilt docker container is `ghcr.io/peterldowns/pgmigrate` and each
+version is properly tagged. You may reference this in a kubernetes config
+as an init container.
+
+To run the pgmigrate cli:
+
 ```bash
 # The default CMD is "pgmigrate" which just shows the help screen.
 docker run -it --rm ghcr.io/peterldowns/pgmigrate:latest
@@ -91,6 +87,21 @@ docker run -it --rm \
   --env PGM_DATABASE='postgresql://postgres:password@host.docker.internal:5433/postgres' \
   ghcr.io/peterldowns/pgmigrate:latest \
   pgmigrate plan
+```
+
+#### Golang:
+I recommend installing a different way -- the golang install has two
+significant drawbacks:
+
+* The installed binary will be named `cli`, and you'll have to rename it to
+  `pgmigrate` yourself.
+* The installed binary will not be contain version information
+
+```bash
+# run it
+go run github.com/peterldowns/pgmigrate/cli@latest --help
+# install it
+go install github.com/peterldowns/pgmigrate/cli@latest
 ```
 
 ## Configuration
