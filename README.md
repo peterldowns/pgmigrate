@@ -90,18 +90,14 @@ docker run -it --rm \
 ```
 
 #### Golang:
-I recommend installing a different way -- the golang install has two
-significant drawbacks:
-
-* The installed binary will be named `cli`, and you'll have to rename it to
-  `pgmigrate` yourself.
-* The installed binary will not be contain version information
+I recommend installing a different way, since the installed binary will not
+contain version information.
 
 ```bash
 # run it
-go run github.com/peterldowns/pgmigrate/cli@latest --help
+go run github.com/peterldowns/pgmigrate/cmd/pgmigrate@latest --help
 # install it
-go install github.com/peterldowns/pgmigrate/cli@latest
+go install github.com/peterldowns/pgmigrate/cmd/pgmigrate@latest
 ```
 
 ## Configuration

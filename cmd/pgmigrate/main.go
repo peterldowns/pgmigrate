@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 
-	"github.com/peterldowns/pgmigrate/cli/root"
+	"github.com/peterldowns/pgmigrate/cmd/pgmigrate/root"
 )
 
 func main() {

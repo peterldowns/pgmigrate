@@ -42,24 +42,13 @@
             #vendorSha256 = pkgs.lib.fakeSha256;
             vendorSha256 = "sha256-IvdXMA5WBnJ9zGxSahG3Z+BXHtD4/C3tqe627QQkxwk=";
             GOWORK = "off";
-            postInstall = ''
-              mv $out/bin/cli $out/bin/pgmigrate
-            '';
             src =
               let
                 # Set this to `true` in order to show all of the source files
                 # that will be included in the module build.
                 debug-tracing = false;
                 source-files = inputs.nix-filter.lib.filter {
-                  root = ./.;
-                  include = [
-                    (inputs.nix-filter.lib.matchExt "go")
-                    "go.mod"
-                    "go.sum"
-                    "go.work"
-                    "cli"
-                    "internal"
-                  ];
+                  root = ./cmd/pgmigrate;
                 };
               in
               (
@@ -72,10 +61,10 @@
             # Add any extra packages required to build the binaries should go here.
             buildInputs = [ ];
             ldflags = [
-              "-X github.com/peterldowns/pgmigrate/cli/shared.Version=${version}"
-              "-X github.com/peterldowns/pgmigrate/cli/shared.Commit=${commit}"
+              "-X github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared.Version=${version}"
+              "-X github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared.Commit=${commit}"
             ];
-            modRoot = "./cli";
+            modRoot = ".";
           };
           default = pgmigrate;
         };

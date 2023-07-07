@@ -19,7 +19,7 @@ class Pgmigrate < Formula
     # https://stackoverflow.com/a/22276273/829926
     # std_go_args definition is here
     # https://github.com/Homebrew/brew/blob/6db7732fa33ab808e405f8ac7673735edd2c8787/Library/Homebrew/formula.rb#L1565
-    system "go", "build", *std_go_args(ldflags: "-s -w " + ldflags, output: bin/"pgmigrate"), "./cli"
+    system "go", "build", *std_go_args(ldflags: "-s -w " + ldflags, output: bin/"pgmigrate"), "./cmd/pgmigrate"
   end
 
   test do

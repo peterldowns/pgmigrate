@@ -1,4 +1,4 @@
-module github.com/peterldowns/pgmigrate/cli
+module github.com/peterldowns/pgmigrate/cmd/pgmigrate
 
 go 1.18
 
