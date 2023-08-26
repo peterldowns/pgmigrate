@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -120,10 +119,6 @@ pgmigrate new vim_user_example --create --bare | xargs vim
 		id := fmt.Sprintf("%s_%s", prefix, suffix)
 		filename := fmt.Sprintf("%s.sql", id)
 		fp := path.Join(dir, filename)
-		fp, err = filepath.Rel(".", fp)
-		if err != nil {
-			return err
-		}
 		if *NewFlags.Create {
 			if err := os.WriteFile(fp, []byte(`-- write your migration here`), 0o660); err != nil {
 				return err
