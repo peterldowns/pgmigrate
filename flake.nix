@@ -88,7 +88,6 @@
               gopls
               gotools
               # Nix
-              rnix-lsp
               nixpkgs-fmt
               # Other
               just
