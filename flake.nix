@@ -32,15 +32,15 @@
             #
             # To find the right hash, set
             #
-            #   vendorSha256 = pkgs.lib.fakeSha256;
+            #   vendorHash = pkgs.lib.fakeHash;
             #
             # then run `nix build`, take the correct hash from the output, and set
             #
-            #   vendorSha256 = <the updated hash>;
+            #   vendorHash = <the updated hash>;
             #
             # (Yes, that's really how you're expected to do this.)
-            #vendorSha256 = pkgs.lib.fakeSha256;
-            vendorSha256 = "sha256-IvdXMA5WBnJ9zGxSahG3Z+BXHtD4/C3tqe627QQkxwk=";
+            #vendorSha256 = pkgs.lib.fakeHash;
+            vendorHash = "sha256-IvdXMA5WBnJ9zGxSahG3Z+BXHtD4/C3tqe627QQkxwk=";
             GOWORK = "off";
             src =
               let
