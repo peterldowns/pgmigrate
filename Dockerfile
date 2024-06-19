@@ -1,7 +1,7 @@
 # Build Stage
 # Pin to the latest minor version without specifying a patch version so that
 # we always deploy security fixes as soon as they are available.
-FROM golang:1.20-alpine as builder
+FROM golang:1.22-alpine as builder
 RUN apk add build-base git
 
 # Have to put our source in the right place for it to build
