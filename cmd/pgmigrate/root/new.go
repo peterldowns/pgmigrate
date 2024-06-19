@@ -67,7 +67,7 @@ pgmigrate new vim_user_example --create --bare | xargs vim
 	`),
 	GroupID:          "dev",
 	TraverseChildren: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if len(args) == 1 && *NewFlags.Name == "" {
 			*NewFlags.Name = args[0]
 		}

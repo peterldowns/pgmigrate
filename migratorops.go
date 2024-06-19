@@ -73,7 +73,7 @@ func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) 
 				ON CONFLICT DO NOTHING;`,
 				pgtools.QuoteIdentifier(m.TableName),
 			)
-			_, err := db.ExecContext(ctx, query, ma.ID, ma.Checksum, ma.ExecutionTimeInMillis, ma.AppliedAt)
+			_, err := tx.ExecContext(ctx, query, ma.ID, ma.Checksum, ma.ExecutionTimeInMillis, ma.AppliedAt)
 			if err != nil {
 				msg := "failed to mark migration as applied"
 				m.error(ctx, err, msg, fields...)
@@ -145,7 +145,7 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string
 		query := fmt.Sprintf(`
 			DELETE FROM %s WHERE id = any($1) RETURNING *;
 		`, pgtools.QuoteIdentifier(m.TableName))
-		rows, err := db.QueryContext(ctx, query, toRemove)
+		rows, err := tx.QueryContext(ctx, query, toRemove)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...Che
 				`UPDATE %s SET checksum = $1 where id = $2 and checksum != $1`,
 				pgtools.QuoteIdentifier(m.TableName),
 			)
-			_, err := db.ExecContext(ctx, query, migration.Checksum, migration.ID)
+			_, err := tx.ExecContext(ctx, query, migration.Checksum, migration.ID)
 			if err != nil {
 				msg := "failed to set checksum"
 				m.error(ctx, err, msg, fields...)

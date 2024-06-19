@@ -31,5 +31,5 @@ func main() {
 func onError(err error) {
 	msg := fmt.Sprintf("error: %s", err)
 	_, _ = fmt.Fprintln(os.Stderr, color.New(color.FgRed, color.Italic).Sprintf(msg))
-	os.Exit(1) //nolint:revive // intentional error handling
+	os.Exit(1)
 }

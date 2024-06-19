@@ -24,7 +24,7 @@ Otherwise, succeeds without printing anything and exits with status code 0.
 	`),
 	GroupID:          "migrating",
 	TraverseChildren: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		shared.State.Parse()
 		database := shared.State.Database()
 		migrations := shared.State.Migrations()
@@ -52,7 +52,7 @@ Otherwise, succeeds without printing anything and exits with status code 0.
 			slogger.With(attrs...).Warn(verr.Message)
 		}
 		if len(verrs) != 0 {
-			os.Exit(1) //nolint:revive // deep-exit
+			os.Exit(1)
 		}
 		return nil
 	},
