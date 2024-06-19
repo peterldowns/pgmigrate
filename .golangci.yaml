@@ -1,7 +1,11 @@
+# yaml-language-server: $schema=https://json.schemastore.org/golangci-lint.json
 # https://golangci-lint.run/usage/configuration/
 linters-settings:
+  gocritic:
+    disabled-checks:
+      - ifElseChain
   goimports:
-    local-prefixes: github.com/rubenv/sql-migrate
+    local-prefixes: github.com/peterldowns/pgmigrate
   govet:
     enable-all: true
     disable:
@@ -10,11 +14,10 @@ linters-settings:
     default-signifies-exhaustive: true
   nolintlint:
     allow-unused: false
-    allow-leading-space: false
     allow-no-explanation:
-      - depguard
       - gochecknoglobals
       - gochecknoinits
+      - unparam
     require-explanation: true
     require-specific: true
   # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
@@ -35,7 +38,7 @@ linters-settings:
           - allowTypesBefore: "*testing.T"
       - name: context-keys-type
       - name: datarace
-      - name: deep-exit
+      # - name: deep-exit
       - name: defer
       - name: dot-imports
       - name: duplicated-imports
@@ -46,22 +49,27 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-      - name: exported
-      - name: flag-parameter
+      # - name: exported
       - name: function-result-limit
         arguments: [3]
       - name: get-return
       - name: identical-branches
       - name: if-return
-      - name: imports-blacklist
-        arguments: []
+      - name: imports-blocklist
+        arguments:
+          - "github.com/cockroachdb/errors"
+          - "github.com/sirupsen/logrus"
+          - "github.com/stretchr/testify"
+          - "github.com/stretchr/testify/require"
+          - "github.com/stretchr/testify/assert"
+          - "log"
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
       - name: modifies-parameter
       - name: modifies-value-receiver
-      - name: nested-structs
-      - name: package-comments
+      # - name: nested-structs
+      # - name: package-comments
       - name: range
       - name: range-val-address
       - name: range-val-in-closure
@@ -91,12 +99,12 @@ linters-settings:
 run:
   tests: true
   timeout: 1m
+
 # https://golangci-lint.run/usage/linters/
 linters:
   disable-all: true
   enable:
     - asciicheck
-    - depguard
     - errcheck
     - exhaustive
     - gocritic
@@ -118,8 +126,19 @@ linters:
     - gosimple
     - unparam
 issues:
+  exclude-use-default: false
   exclude:
     # Allow shadowing of `err` because it's so common
     - 'declaration of "err" shadows declaration at'
+    # Allow writing tags on non-exported fields, necessary for graphql
+    - "tag on not-exported field"
+    # Upstream Defaults from
+    # https://golangci-lint.run/usage/false-positives/#default-exclusions
+    - 'Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked'
+  exclude-rules: []
   max-same-issues: 10000
   max-issues-per-linter: 10000
+  exclude-dirs-use-default: false
+  exclude-dirs:
+    - ^/nix/store/.*
+    - .*/.toolchain-*/.*
