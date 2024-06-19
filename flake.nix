@@ -39,8 +39,8 @@
             #   vendorHash = <the updated hash>;
             #
             # (Yes, that's really how you're expected to do this.)
-            #vendorSha256 = pkgs.lib.fakeHash;
-            vendorHash = "sha256-SDDJ0+rhVMf7qcn61yw6MN3wQSo896rNLQ2ZAz7G+o8=";
+            #vendorHash = pkgs.lib.fakeHash;
+            vendorHash = "sha256-Pa2Du27GnHYELlvSFPwH0Cb+8CVI7PRmhx1fxUz04u0=";
             GOWORK = "off";
             src =
               let
