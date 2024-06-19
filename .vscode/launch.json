@@ -5,24 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug python",
-            "type": "python",
-            "request": "launch",
-            "mode": "debug",
-            "args": ["main.py"],
-            "program": "python3",
-
-        },
-        {
-            "name": "debug golang",
+            "name": "debug dump",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "env": {
                 "PGM_CONFIGFILE": "/Users/pd/code/pgmigrate/.pgmigrate.yaml"
             },
-            "args": ["dump"],
-            "program": "./cli",
+            "args": ["dump", "--out", "-"],
+            "program": "./cmd/pgmigrate",
 
         }
     ]

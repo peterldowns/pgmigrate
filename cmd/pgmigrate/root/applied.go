@@ -23,7 +23,7 @@ command will print nothing and exit successfully.
 	`),
 	GroupID:          "migrating",
 	TraverseChildren: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		shared.State.Parse()
 		migrations := shared.State.Migrations()
 		database := shared.State.Database()

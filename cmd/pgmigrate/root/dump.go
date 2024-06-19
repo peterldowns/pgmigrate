@@ -65,7 +65,7 @@ diff schema.sql another.sql # should show no differences
 	`),
 	GroupID:          "dev",
 	TraverseChildren: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if len(args) == 1 && *DumpFlags.Out == "" {
 			*DumpFlags.Out = args[0]
 		}

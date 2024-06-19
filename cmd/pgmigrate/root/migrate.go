@@ -59,7 +59,7 @@ Finally, the advisory lock is released.
 	`),
 	GroupID:          "migrating",
 	TraverseChildren: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		shared.State.Parse()
 		database := shared.State.Database()
 		migrations := shared.State.Migrations()
