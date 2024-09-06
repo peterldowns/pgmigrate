@@ -2,6 +2,7 @@ package root
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"strconv"
@@ -137,4 +138,15 @@ func init() {
 	NewFlags.Bare = newCmd.Flags().BoolP("bare", "b", false, "if true, only print the created migration file path")
 	NewFlags.Create = newCmd.Flags().BoolP("create", "c", false, "if true, create the migration file")
 	NewFlags.Name = newCmd.Flags().StringP("name", "n", "", "the name of the new migration (default 'generated')")
+}
+
+func newMigrator(dir fs.FS, tableName string, logger pgmigrate.Logger) (*pgmigrate.Migrator, error) {
+	migrations, err := pgmigrate.Load(dir)
+	if err != nil {
+		return nil, fmt.Errorf("load migrations: %w", err)
+	}
+	m := pgmigrate.NewMigrator(migrations)
+	m.Logger = logger
+	m.TableName = tableName
+	return m, nil
 }

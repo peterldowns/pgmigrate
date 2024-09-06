@@ -7,7 +7,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/spf13/cobra"
 
-	"github.com/peterldowns/pgmigrate"
 	"github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared"
 )
 
@@ -75,7 +74,12 @@ Finally, the advisory lock is released.
 		}
 		defer db.Close()
 
-		verrs, err := pgmigrate.Migrate(cmd.Context(), db, dir, mlogger)
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
+
+		verrs, err := m.Migrate(cmd.Context(), db)
 		if err != nil {
 			return err
 		}

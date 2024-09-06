@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/peterldowns/pgmigrate"
 	"github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared"
 )
 
@@ -40,7 +39,12 @@ Otherwise, succeeds without printing anything and exits with status code 0.
 		}
 		defer db.Close()
 
-		verrs, err := pgmigrate.Verify(cmd.Context(), db, dir, mlogger)
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
+
+		verrs, err := m.Verify(cmd.Context(), db)
 		if err != nil {
 			return err
 		}
