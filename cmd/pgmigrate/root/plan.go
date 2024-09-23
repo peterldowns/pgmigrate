@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/peterldowns/pgmigrate"
 	"github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared"
 )
 
@@ -73,7 +72,12 @@ problems.
 		}
 		defer db.Close()
 
-		plan, err := pgmigrate.Plan(cmd.Context(), db, dir, mlogger)
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
+
+		plan, err := m.Plan(cmd.Context(), db)
 		if err != nil {
 			return err
 		}
