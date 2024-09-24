@@ -1,7 +1,6 @@
 package ops
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -55,7 +54,7 @@ pgmigrate ops set-checksum --id 123_example --checksum aaaaaaaaaaaaaaaaaaaaaaaaa
 		if err := shared.Validate(database, migrationsDir); err != nil {
 			return err
 		}
-		db, err := sql.Open("pgx", database.Value())
+		db, err := shared.OpenDB()
 		if err != nil {
 			return err
 		}

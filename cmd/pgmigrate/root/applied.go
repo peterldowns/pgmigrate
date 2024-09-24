@@ -1,7 +1,6 @@
 package root
 
 import (
-	"database/sql"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -32,7 +31,7 @@ command will print nothing and exit successfully.
 		dir := os.DirFS(migrations.Value())
 
 		slogger, mlogger := shared.State.Logger()
-		db, err := sql.Open("pgx", database.Value())
+		db, err := shared.OpenDB()
 		if err != nil {
 			return err
 		}

@@ -1,7 +1,6 @@
 package root
 
 import (
-	"database/sql"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -66,7 +65,7 @@ problems.
 
 		slogger, mlogger := shared.State.Logger()
 		dir := os.DirFS(migrations.Value())
-		db, err := sql.Open("pgx", database.Value())
+		db, err := shared.OpenDB()
 		if err != nil {
 			return err
 		}

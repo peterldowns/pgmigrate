@@ -1,10 +1,8 @@
 package root
 
 import (
-	"database/sql"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/spf13/cobra"
 
 	"github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared"
@@ -68,7 +66,8 @@ Finally, the advisory lock is released.
 
 		slogger, mlogger := shared.State.Logger()
 		dir := os.DirFS(migrations.Value())
-		db, err := sql.Open("pgx", database.Value())
+
+		db, err := shared.OpenDB()
 		if err != nil {
 			return err
 		}

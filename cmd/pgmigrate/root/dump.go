@@ -1,7 +1,6 @@
 package root
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 
@@ -74,7 +73,7 @@ diff schema.sql another.sql # should show no differences
 		if err := shared.Validate(database); err != nil {
 			return err
 		}
-		db, err := sql.Open("pgx", database.Value())
+		db, err := shared.OpenDB()
 		if err != nil {
 			return err
 		}

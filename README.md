@@ -475,6 +475,36 @@ pgmigrate --database $PROD plan
 pgmigrate --database $PROD verify
 ```
 
+## ERROR: prepared statement "stmtcache_..." already exists (SQLSTATE 42P05)
+If you're using the `pgmigrate` CLI and you see an error like this:
+
+```
+error: hasMigrationsTable: ERROR: prepared statement "stmtcache_19cfd54753d282685a62119ed71c7d6c9a2acfa4aa0d34ad" already exists (SQLSTATE 42P05)
+```
+
+you can fix the issue by adding a parameter to your database connection string to change how `pgmigrate` caches statements:
+
+```yaml
+# before
+database: "postgresql://user:password@host.provider.com:6543/postgres"
+# after
+database: "postgresql://user:password@host.provider.com:6543/postgres?default_query_exec_mode=describe_exec"
+```  
+
+`pgmigrate` uses the on [`jackc/pgx`](https://github.com/jackc/pgx/) library to
+connect to Postgres databases.  This library defaults to fairly aggressives
+statement caching which is unfortunately not compatible with Pgbouncer or other
+poolers. If you've seen the error above, you're most likely connecting through a
+pooler like Pgbouncer.
+
+The solution is to pass a `default_query_exec_mode=exec` connection string parameter, which
+`jackc/pgx` will use to configure its statement caching behavior. [The documentation](https://pkg.go.dev/github.com/jackc/pgx/v5#QueryExecMode)
+and [the connection parsing code](https://github.com/jackc/pgx/blob/fd0c65478e18be837b77c7ef24d7220f50540d49/conn.go#L194) describe the available
+options, but `exec` should work by default. 
+
+As of v0.1.0, the CLI will automatically add this query parameter for you if you
+haven't already specified a statement caching mode.
+
 # Acknowledgements
 
 I'd like to thank and acknowledge:
@@ -486,23 +516,3 @@ I'd like to thank and acknowledge:
   implement `pgmigrate dump`.
 - The backend team at Pipe for helping test and validate this project's
   assumptions, utility, and implementation.
-
-# Future Work / TODOs
-
-- [ ] Library
-  - [ ] More tests for the schema handling stuff
-  - [ ] Generally clean up the code
-- [ ] Readme
-  - [ ] example of using pgtestdb
-  - [ ] discussion of large/long-running migrations
-- [ ] Wishlist
-  - [ ] make `*Result` diffable, allow generating migration from current state of database.
-    - for now, just use [https://github.com/djrobstep/migra](https://github.com/djrobstep/migra)
-  - [ ] some kind of built-inlinting
-    - maybe using https://github.com/auxten/postgresql-parser
-    - BEGIN/COMMIT/ROLLBACK
-    - serial vs. identity
-    - pks / fks with indexes
-    - uppercase / mixed case
-    - https://squawkhq.com/
-    - https://github.com/sqlfluff/sqlfluff

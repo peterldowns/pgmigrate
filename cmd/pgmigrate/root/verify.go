@@ -1,7 +1,6 @@
 package root
 
 import (
-	"database/sql"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -33,7 +32,7 @@ Otherwise, succeeds without printing anything and exits with status code 0.
 
 		slogger, mlogger := shared.State.Logger()
 		dir := os.DirFS(migrations.Value())
-		db, err := sql.Open("pgx", database.Value())
+		db, err := shared.OpenDB()
 		if err != nil {
 			return err
 		}
