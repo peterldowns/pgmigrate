@@ -251,6 +251,7 @@ func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...Che
 				`UPDATE %s SET checksum = $1 where id = $2 and checksum != $1`,
 				pgtools.QuoteIdentifier(m.TableName),
 			)
+			m.debug(ctx, query)
 			_, err := tx.ExecContext(ctx, query, migration.Checksum, migration.ID)
 			if err != nil {
 				msg := "failed to set checksum"

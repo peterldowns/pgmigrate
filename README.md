@@ -1,6 +1,6 @@
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.0.7/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.1.0/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 pgmigrate is a modern Postgres migrations CLI and golang library. It is
@@ -203,7 +203,7 @@ Flags:
   -h, --help                help for pgmigrate
       --log-format string   [PGM_LOGFORMAT] 'text' or 'json', the log line format (default 'text')
   -m, --migrations string   [PGM_MIGRATIONS] a path to a directory containing *.sql migrations
-      --table-name string   [PGM_TABLENAME] the table name to use to store migration records (default 'pgmigrate_migrations')
+      --table-name string   [PGM_TABLENAME] the table name to use to store migration records (default 'public.pgmigrate_migrations')
   -v, --version             version for pgmigrate
 
 Use "pgmigrate [command] --help" for more information about a command.
