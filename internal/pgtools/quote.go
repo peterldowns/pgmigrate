@@ -2,7 +2,7 @@ package pgtools
 
 import "strings"
 
-// quoteLiteral and quoteIdentifier contains are derived almost exactly from
+// QuoteLiteral and QuoteIdentifier contains are derived almost exactly from
 // lib/pq, which is released under the MIT License.
 // https://github.com/lib/pq
 //
@@ -60,7 +60,7 @@ func QuoteLiteral(literal string) string {
 	return literal
 }
 
-// quoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be
+// QuoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be
 // used as part of an SQL statement.  For example:
 //
 //	tblname := "my_table"
@@ -77,4 +77,15 @@ func QuoteIdentifier(name string) string {
 		name = name[:end]
 	}
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
+
+// QuoteTableAndSchema quotes the name of a table, optionally including a schema prefix
+// separated by a literal `.`, for use in statements like `CREATE TABLE`.
+func QuoteTableAndSchema(name string) string {
+	parts := strings.Split(name, ".")
+	var out []string
+	for _, part := range parts {
+		out = append(out, QuoteIdentifier(part))
+	}
+	return strings.Join(out, ".")
 }

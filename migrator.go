@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/peterldowns/pgmigrate/internal/multierr"
@@ -12,9 +13,9 @@ import (
 )
 
 const (
-	// DefaultTableName is the default name of the migrations table that
-	// pgmigrate will use to store a record of applied migrations.
-	DefaultTableName string = "pgmigrate_migrations"
+	// DefaultTableName is the default name of the migrations table (with
+	// schema) that pgmigrate will use to store a record of applied migrations.
+	DefaultTableName string = "public.pgmigrate_migrations"
 
 	// sessionLockPrefix is prefix used by pgmigrate to help prevent conflicts
 	// between its lock and other users of Postgres advisory locks. This prefix
@@ -148,24 +149,38 @@ func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error
 					execution_time_in_millis BIGINT NOT NULL,
 					applied_at TIMESTAMPTZ NOT NULL
 				)
-			`, pgtools.QuoteIdentifier(m.TableName))
+			`, pgtools.QuoteTableAndSchema(m.TableName))
+	m.debug(ctx, query)
 	_, err := db.ExecContext(ctx, query)
-	return err
+	if err != nil {
+		return fmt.Errorf("ensureMigrationsTable: %w", err)
+	}
+	return nil
 }
 
 // hasMigrationsTable returns true if the migrations table exists, false
 // otherwise.
 func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, error) {
+	parts := strings.SplitN(m.TableName, ".", 2)
+	var schema, tablename string
+	if len(parts) == 1 {
+		schema = "public"
+		tablename = parts[0]
+	} else {
+		schema = parts[0]
+		tablename = parts[1]
+	}
 	query := fmt.Sprintf(`
 				SELECT EXISTS (
 					SELECT FROM pg_tables
-					WHERE tablename = %s
+					WHERE tablename = %s AND schemaname = %s
 				);
-			`, pgtools.QuoteLiteral(m.TableName))
+			`, pgtools.QuoteLiteral(tablename), pgtools.QuoteLiteral(schema))
+	m.debug(ctx, query)
 	var exists bool
 	err := db.QueryRowContext(ctx, query).Scan(&exists)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("hasMigrationsTable: %w", err)
 	}
 	return exists, nil
 }
@@ -246,7 +261,8 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s ORDER BY applied_at, id ASC
-	`, pgtools.QuoteIdentifier(m.TableName))
+	`, pgtools.QuoteTableAndSchema(m.TableName))
+	m.debug(ctx, query)
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -316,8 +332,9 @@ func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Mi
 			( id, checksum, execution_time_in_millis, applied_at )
 			VALUES
 			( $1, $2, $3, $4 )`,
-			pgtools.QuoteIdentifier(m.TableName),
+			pgtools.QuoteTableAndSchema(m.TableName),
 		)
+		m.debug(ctx, query)
 		_, err = tx.ExecContext(ctx, query, applied.ID, applied.Checksum, applied.ExecutionTimeInMillis, applied.AppliedAt)
 		if err != nil {
 			msg := "failed to mark migration as applied"
