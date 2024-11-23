@@ -18,12 +18,9 @@ import (
 // It returns a list of the [AppliedMigration]s that have been marked as
 // applied.
 func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
+	err := m.ensureMigrationsTable(ctx, db)
 	if err != nil {
 		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
 	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
@@ -114,12 +111,9 @@ func (m *Migrator) MarkAllApplied(ctx context.Context, db Executor) ([]AppliedMi
 // It returns a list of the [AppliedMigration]s that have been marked as
 // unapplied.
 func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
+	err := m.ensureMigrationsTable(ctx, db)
 	if err != nil {
 		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
 	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
@@ -167,13 +161,6 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string
 // It returns a list of the [AppliedMigration]s that have been marked as
 // unapplied.
 func (m *Migrator) MarkAllUnapplied(ctx context.Context, db Executor) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
-	if err != nil {
-		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
-	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
 		return nil, err
@@ -202,12 +189,9 @@ type ChecksumUpdate struct {
 // It returns a list of the [AppliedMigration]s whose checksums have been
 // updated.
 func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...ChecksumUpdate) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
+	err := m.ensureMigrationsTable(ctx, db)
 	if err != nil {
 		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
 	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
