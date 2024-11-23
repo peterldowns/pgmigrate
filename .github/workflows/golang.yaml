@@ -55,15 +55,10 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v5
+        uses: golangci/golangci-lint-action@v6
         with:
           install-mode: "binary"
           version: "v1.57.1"
-          # https://github.com/golangci/golangci-lint-action/issues/244
-          # https://github.com/Kong/mesh-perf/pull/168
-          # https://github.com/golangci/golangci-lint-action/issues/552#issuecomment-1413509544
-          args: --timeout 10m
-          skip-cache: true
       - name: go mod tidy
         run: go mod tidy
       - name: check for any changes
