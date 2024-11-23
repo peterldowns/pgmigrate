@@ -68,7 +68,7 @@ func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) 
 				INSERT INTO %s ( id, checksum, execution_time_in_millis, applied_at )
 				VALUES ( $1, $2, $3, $4 )
 				ON CONFLICT DO NOTHING;`,
-				pgtools.QuoteIdentifier(m.TableName),
+				pgtools.QuoteTableAndSchema(m.TableName),
 			)
 			_, err := tx.ExecContext(ctx, query, ma.ID, ma.Checksum, ma.ExecutionTimeInMillis, ma.AppliedAt)
 			if err != nil {
