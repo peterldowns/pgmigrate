@@ -7,7 +7,7 @@ toolchain go1.22.1
 require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/lib/pq v1.10.9
-	github.com/peterldowns/pgmigrate v0.1.0
+	github.com/peterldowns/pgmigrate v0.2.0
 	github.com/peterldowns/pgtestdb v0.0.14
 	github.com/peterldowns/pgtestdb/migrators/pgmigrator v0.0.14
 	github.com/peterldowns/testy v0.0.1
@@ -18,7 +18,6 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/jackc/pgx/v5 v5.7.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
