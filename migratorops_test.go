@@ -79,28 +79,27 @@ func TestMarkUnapplied(t *testing.T) {
 		// Start with all migrations applied, empty plan.
 		migrator := pgmigrate.NewMigrator(migrations)
 		migrator.Logger = logger
-		applied, err := migrator.Migrate(ctx, db)
+		verrs, err := migrator.Migrate(ctx, db)
+		assert.Nil(t, err)
+		assert.Equal(t, nil, verrs)
+		applied, err := migrator.Applied(ctx, db)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(applied))
 
 		plan, err := migrator.Plan(ctx, db)
 		assert.Nil(t, err)
-		assert.Equal(t, 1, len(plan))
-		toApply := plan[0]
-		assert.Equal(t, migrations[0], toApply)
+		assert.Equal(t, nil, plan)
 
 		// Unapply the migration and check that it becomes present in the plan
 		unapplied, err := migrator.MarkUnapplied(ctx, db, migrations[0].ID)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(unapplied))
-		mig := unapplied[0]
-		assert.Equal(t, migrations[0], mig.Migration)
+		assert.Equal(t, migrations[0].ID, unapplied[0].ID)
 
 		plan, err = migrator.Plan(ctx, db)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(plan))
-		toApply = plan[0]
-		assert.Equal(t, migrations[0], toApply)
+		assert.Equal(t, migrations[0], plan[0])
 		return nil
 	})
 	assert.Nil(t, err)
@@ -117,7 +116,10 @@ func TestMarkAllUnapplied(t *testing.T) {
 		// Start with all migrations applied, empty plan.
 		migrator := pgmigrate.NewMigrator(migrations)
 		migrator.Logger = logger
-		applied, err := migrator.Migrate(ctx, db)
+		verrs, err := migrator.Migrate(ctx, db)
+		assert.Nil(t, err)
+		assert.Equal(t, nil, verrs)
+		applied, err := migrator.Applied(ctx, db)
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(applied))
 
@@ -125,7 +127,7 @@ func TestMarkAllUnapplied(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, nil, plan)
 
-		// Unapply the migration and check that it becomes present in the plan
+		// Unapply the migrations and check that they become present in the plan
 		unapplied, err := migrator.MarkAllUnapplied(ctx, db)
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(unapplied))

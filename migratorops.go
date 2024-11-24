@@ -138,7 +138,7 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string
 	if err := m.inTx(ctx, db, func(tx *sql.Tx) error {
 		query := fmt.Sprintf(`
 			DELETE FROM %s WHERE id = any($1) RETURNING *;
-		`, pgtools.QuoteIdentifier(m.TableName))
+		`, pgtools.QuoteTableAndSchema(m.TableName))
 		rows, err := tx.QueryContext(ctx, query, toRemove)
 		if err != nil {
 			return err
