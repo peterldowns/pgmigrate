@@ -15,15 +15,16 @@ import (
 // You should NOT use this as part of normal operations, it exists to help
 // devops/db-admin/sres interact with migration state.
 //
-// It returns a list of the [AppliedMigration]s that have been marked as
+// It returns a list of the [AppliedMigration] that have been marked as
 // applied.
-func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
+func (m *Migrator) MarkApplied(
+	ctx context.Context,
+	db Executor,
+	ids ...string,
+) ([]AppliedMigration, error) {
+	err := m.ensureMigrationsTable(ctx, db)
 	if err != nil {
 		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
 	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
@@ -71,7 +72,7 @@ func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) 
 				INSERT INTO %s ( id, checksum, execution_time_in_millis, applied_at )
 				VALUES ( $1, $2, $3, $4 )
 				ON CONFLICT DO NOTHING;`,
-				pgtools.QuoteIdentifier(m.TableName),
+				pgtools.QuoteTableAndSchema(m.TableName),
 			)
 			_, err := tx.ExecContext(ctx, query, ma.ID, ma.Checksum, ma.ExecutionTimeInMillis, ma.AppliedAt)
 			if err != nil {
@@ -94,9 +95,12 @@ func (m *Migrator) MarkApplied(ctx context.Context, db Executor, ids ...string) 
 // You should NOT use this as part of normal operations, it exists to help
 // devops/db-admin/sres interact with migration state.
 //
-// It returns a list of the [AppliedMigration]s that have been marked as
+// It returns a list of the [AppliedMigration] that have been marked as
 // applied.
-func (m *Migrator) MarkAllApplied(ctx context.Context, db Executor) ([]AppliedMigration, error) {
+func (m *Migrator) MarkAllApplied(
+	ctx context.Context,
+	db Executor,
+) ([]AppliedMigration, error) {
 	var ids []string
 	for _, migration := range m.Migrations {
 		ids = append(ids, migration.ID)
@@ -111,15 +115,16 @@ func (m *Migrator) MarkAllApplied(ctx context.Context, db Executor) ([]AppliedMi
 // You should NOT use this as part of normal operations, it exists to help
 // devops/db-admin/sres interact with migration state.
 //
-// It returns a list of the [AppliedMigration]s that have been marked as
+// It returns a list of the [AppliedMigration] that have been marked as
 // unapplied.
-func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
+func (m *Migrator) MarkUnapplied(
+	ctx context.Context,
+	db Executor,
+	ids ...string,
+) ([]AppliedMigration, error) {
+	err := m.ensureMigrationsTable(ctx, db)
 	if err != nil {
 		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
 	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
@@ -144,7 +149,7 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string
 	if err := m.inTx(ctx, db, func(tx *sql.Tx) error {
 		query := fmt.Sprintf(`
 			DELETE FROM %s WHERE id = any($1) RETURNING *;
-		`, pgtools.QuoteIdentifier(m.TableName))
+		`, pgtools.QuoteTableAndSchema(m.TableName))
 		rows, err := tx.QueryContext(ctx, query, toRemove)
 		if err != nil {
 			return err
@@ -164,16 +169,12 @@ func (m *Migrator) MarkUnapplied(ctx context.Context, db Executor, ids ...string
 // You should NOT use this as part of normal operations, it exists to help
 // devops/db-admin/sres interact with migration state.
 //
-// It returns a list of the [AppliedMigration]s that have been marked as
+// It returns a list of the [AppliedMigration] that have been marked as
 // unapplied.
-func (m *Migrator) MarkAllUnapplied(ctx context.Context, db Executor) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
-	if err != nil {
-		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
-	}
+func (m *Migrator) MarkAllUnapplied(
+	ctx context.Context,
+	db Executor,
+) ([]AppliedMigration, error) {
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
 		return nil, err
@@ -199,15 +200,16 @@ type ChecksumUpdate struct {
 // You should NOT use this as part of normal operations, it exists to help
 // devops/db-admin/sres interact with migration state.
 //
-// It returns a list of the [AppliedMigration]s whose checksums have been
+// It returns a list of the [AppliedMigration] whose checksums have been
 // updated.
-func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...ChecksumUpdate) ([]AppliedMigration, error) {
-	hasMigrations, err := m.hasMigrationsTable(ctx, db)
+func (m *Migrator) SetChecksums(
+	ctx context.Context,
+	db Executor,
+	updates ...ChecksumUpdate,
+) ([]AppliedMigration, error) {
+	err := m.ensureMigrationsTable(ctx, db)
 	if err != nil {
 		return nil, err
-	}
-	if !hasMigrations {
-		return nil, fmt.Errorf("migrations table %s does not exist", m.TableName)
 	}
 	applied, err := m.Applied(ctx, db)
 	if err != nil {
@@ -249,7 +251,7 @@ func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...Che
 			}
 			query := fmt.Sprintf(
 				`UPDATE %s SET checksum = $1 where id = $2 and checksum != $1`,
-				pgtools.QuoteIdentifier(m.TableName),
+				pgtools.QuoteTableAndSchema(m.TableName),
 			)
 			m.debug(ctx, query)
 			_, err := tx.ExecContext(ctx, query, migration.Checksum, migration.ID)
@@ -274,9 +276,13 @@ func (m *Migrator) SetChecksums(ctx context.Context, db Executor, updates ...Che
 // You should NOT use this as part of normal operations, it exists to help
 // devops/db-admin/sres interact with migration state.
 //
-// It returns a list of the [AppliedMigration]s whose checksums have been
+// It returns a list of the [AppliedMigration] whose checksums have been
 // recalculated.
-func (m *Migrator) RecalculateChecksums(ctx context.Context, db Executor, ids ...string) ([]AppliedMigration, error) {
+func (m *Migrator) RecalculateChecksums(
+	ctx context.Context,
+	db Executor,
+	ids ...string,
+) ([]AppliedMigration, error) {
 	allChecksums := make(map[string]string, len(m.Migrations))
 	for _, migration := range m.Migrations {
 		allChecksums[migration.ID] = migration.MD5()
@@ -295,7 +301,10 @@ func (m *Migrator) RecalculateChecksums(ctx context.Context, db Executor, ids ..
 	return m.SetChecksums(ctx, db, updates...)
 }
 
-func (m *Migrator) RecalculateAllChecksums(ctx context.Context, db Executor) ([]AppliedMigration, error) {
+func (m *Migrator) RecalculateAllChecksums(
+	ctx context.Context,
+	db Executor,
+) ([]AppliedMigration, error) {
 	updates := make([]ChecksumUpdate, 0, len(m.Migrations))
 	for _, migration := range m.Migrations {
 		updates = append(updates, ChecksumUpdate{
