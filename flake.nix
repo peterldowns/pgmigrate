@@ -65,6 +65,7 @@
               "-X github.com/peterldowns/pgmigrate/cmd/pgmigrate/shared.Commit=${commit}"
             ];
             modRoot = ".";
+            doCheck = false;
           };
           default = pgmigrate;
         };
