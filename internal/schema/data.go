@@ -15,7 +15,7 @@ type Data struct {
 	Name    string   `yaml:"name"`
 	Columns []string `yaml:"columns"`
 	OrderBy string   `yaml:"orderBy"`
-	Rows    []any
+	rows    []any
 }
 
 func (d Data) SortKey() string {
@@ -34,14 +34,14 @@ func tsToString(t time.Time) string {
 }
 
 func (d Data) String() string {
-	if len(d.Rows) == 0 || len(d.Columns) == 0 {
+	if len(d.rows) == 0 || len(d.Columns) == 0 {
 		return ""
 	}
 	prelude := fmt.Sprintf("INSERT INTO %s (%s) VALUES\n", identifier(d.Schema, d.Name), strings.Join(d.Columns, ", "))
 	rowLen := len(d.Columns)
 	out := prelude
-	for i := 0; i < len(d.Rows); i += rowLen {
-		rowValues := d.Rows[i : i+rowLen]
+	for i := 0; i < len(d.rows); i += rowLen {
+		rowValues := d.rows[i : i+rowLen]
 		values := make([]string, 0, len(rowValues))
 		for _, val := range rowValues {
 			if val == nil {
@@ -64,7 +64,7 @@ func (d Data) String() string {
 			values = append(values, pgtools.QuoteLiteral(literal))
 		}
 		out += fmt.Sprintf("(%s)", strings.Join(values, ", "))
-		if i != len(d.Rows)-rowLen {
+		if i != len(d.rows)-rowLen {
 			out += ",\n"
 		} else {
 			out += "\n;"
@@ -100,7 +100,7 @@ and c.relname like $2;
 					Name:    name,
 					Columns: d.Columns,
 					OrderBy: d.OrderBy,
-					Rows:    []any{},
+					rows:    []any{},
 				})
 			}
 		} else {
@@ -109,7 +109,7 @@ and c.relname like $2;
 				Name:    d.Name,
 				Columns: d.Columns,
 				OrderBy: d.OrderBy,
-				Rows:    []any{},
+				rows:    []any{},
 			})
 		}
 	}
@@ -164,7 +164,7 @@ from %s
 					ifaces[i] = v.Elem().Interface()
 				}
 			}
-			d.Rows = append(d.Rows, ifaces...)
+			d.rows = append(d.rows, ifaces...)
 		}
 	}
 	return Sort[string](toLoad), nil
