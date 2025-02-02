@@ -277,6 +277,7 @@ func (s *Schema) String() string {
 	// custom Function.
 	//
 	// - Extensions
+	// - Schemas
 	// - Domains
 	// - Enums
 	// - CompoundTypes
@@ -286,6 +287,10 @@ func (s *Schema) String() string {
 	// explicitly say they depend on these.
 	for _, obj := range s.Extensions {
 		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+	for _, schemaName := range s.Config.Schemas {
+		out.WriteString(schemaDefinition(schemaName))
 		out.WriteString("\n\n")
 	}
 	for _, obj := range s.Domains {
@@ -357,4 +362,8 @@ func (s *Schema) String() string {
 	}
 
 	return strings.TrimSpace(out.String())
+}
+
+func schemaDefinition(schemaName string) string {
+	return fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", identifier(schemaName))
 }

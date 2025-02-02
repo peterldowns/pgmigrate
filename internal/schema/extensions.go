@@ -17,7 +17,7 @@ type Extension struct {
 }
 
 func (e Extension) SortKey() string {
-	return e.Name
+	return e.Name // TODO: need to put schema on every sort key
 }
 
 func (e Extension) DependsOn() []string {
