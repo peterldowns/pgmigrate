@@ -3,7 +3,6 @@ package schema_test
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"testing"
 
 	"github.com/peterldowns/testy/assert"
@@ -144,7 +143,6 @@ INSERT INTO aaa.dogs (name, enemy_cat_name) VALUES
 		if err != nil {
 			return err
 		}
-		fmt.Println(result.String())
 		check.Equal(t, def, result.String())
 		return nil
 	})
