@@ -16,7 +16,7 @@ func TestLoadCompoundTypesSucceedsWithEmptyDB(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.Config{Schemas: []string{"public"}}
 		types, err := schema.LoadCompoundTypes(config, db)
 		if err != nil {
 			return err
@@ -31,7 +31,7 @@ func TestLoadCompoundTypes(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.Config{Schemas: []string{"public"}}
 		_, err := db.ExecContext(ctx, `CREATE TYPE public.foo AS (age int4, name text);`)
 		if err != nil {
 			return err

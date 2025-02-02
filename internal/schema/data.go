@@ -78,22 +78,25 @@ func LoadData(config Config, db *sql.DB) ([]*Data, error) {
 	for _, d := range config.Data {
 		if strings.Contains(d.Name, "%") {
 			rows, err := db.Query(query(`--sql
-select c.relname as name
+select
+	c.relnamespace::regnamespace::text as schema_name,
+	c.relname as name
 from pg_catalog.pg_class c
-where c.relnamespace::regnamespace::text = $1
+where c.relnamespace::regnamespace::text = ANY($1)
 and c.relkind in ('r', 't', 'p', 'm', 'v')
 and c.relname like $2;
-			`), config.Schema, d.Name)
+			`), config.Schemas, d.Name)
 			if err != nil {
 				return nil, err
 			}
 			for rows.Next() {
+				var schemaName string
 				var name string
-				if err := rows.Scan(&name); err != nil {
+				if err := rows.Scan(&schemaName, &name); err != nil {
 					return nil, err
 				}
 				toLoad = append(toLoad, &Data{
-					Schema:  config.Schema,
+					Schema:  schemaName,
 					Name:    name,
 					Columns: d.Columns,
 					OrderBy: d.OrderBy,
@@ -102,7 +105,7 @@ and c.relname like $2;
 			}
 		} else {
 			toLoad = append(toLoad, &Data{
-				Schema:  config.Schema,
+				Schema:  d.Schema,
 				Name:    d.Name,
 				Columns: d.Columns,
 				OrderBy: d.OrderBy,
@@ -118,7 +121,8 @@ and c.relname like $2;
 		q := fmt.Sprintf(query(`--sql
 select %s
 from %s
-		`), cols, identifier(config.Schema, d.Name))
+		`), cols, identifier(d.Schema, d.Name))
+		// TODO: ^ needs the identifier escape fix from pgtestdb
 		if d.OrderBy != "" {
 			q += "\norder by " + d.OrderBy
 		}

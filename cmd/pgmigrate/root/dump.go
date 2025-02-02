@@ -3,6 +3,7 @@ package root
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -81,7 +82,8 @@ diff schema.sql another.sql # should show no differences
 
 		config := shared.State.Config
 		if *DumpFlags.Schema != "" {
-			config.Schema.Schema = *DumpFlags.Schema
+			// TODO: parse a list
+			config.Schema.Schemas = strings.Split(*DumpFlags.Schema, ",")
 		}
 		parsed, err := schema.Parse(config.Schema, db)
 		if err != nil {

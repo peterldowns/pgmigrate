@@ -17,7 +17,7 @@ type Dependency struct { // TODO: explain not sortable!
 func LoadDependencies(config Config, db *sql.DB) ([]*Dependency, error) {
 	var deps []*Dependency
 
-	rows, err := db.Query(dependenciesQuery, config.Schema)
+	rows, err := db.Query(dependenciesQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ filtered as (
 		on o.oid = e.oid
 	-- exclude any objects defined/created by extensions
 	-- exclude any objects outside of the desired schema
-	where o.schema = $1 and e.oid is null
+	where o.schema = ANY($1) and e.oid is null
 ),
 dependencies as (
 	select distinct

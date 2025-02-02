@@ -54,7 +54,7 @@ func (i Index) String() string {
 
 func LoadIndexes(config Config, db *sql.DB) ([]*Index, error) {
 	var indexes []*Index
-	rows, err := db.Query(indexesQuery, config.Schema)
+	rows, err := db.Query(indexesQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ pre as (
 where
     x.indislive
     and c.relkind in ('r', 'm', 'p') AND i.relkind in ('i', 'I')
-	and n.nspname::regnamespace::text = $1
+	and n.nspname::regnamespace::text = ANY($1)
 	and e.oid is null
 	and er.oid is null
 )

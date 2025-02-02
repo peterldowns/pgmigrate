@@ -66,7 +66,7 @@ func (v View) String() string {
 
 func LoadViews(config Config, db *sql.DB) ([]*View, error) {
 	var views []*View
-	rows, err := db.Query(viewsQuery, config.Schema)
+	rows, err := db.Query(viewsQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ with r as (
 		inner join pg_catalog.pg_namespace n
 		  ON n.oid = c.relnamespace
 	where c.relkind in ('m', 'v')
-	and n.nspname = $1
+	and n.nspname = ANY($1)
 )
 select
 	r.oid as "view_oid",

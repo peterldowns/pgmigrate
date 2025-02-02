@@ -14,7 +14,7 @@ import (
 
 func TestLoadEnumsSucceedsWithoutAnyEnums(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		enums, err := schema.LoadEnums(config, db)
@@ -54,7 +54,7 @@ CREATE TYPE public.no_values AS ENUM (
 
 func checkEnum(t *testing.T, definition, result string) {
 	t.Helper()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		if _, err := db.ExecContext(ctx, definition); err != nil {

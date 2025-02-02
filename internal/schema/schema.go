@@ -9,8 +9,8 @@ import (
 const DefaultSchema = "public"
 
 type Config struct {
-	// The name of the schema whose contents should be dumped.
-	Schema string `yaml:"name"`
+	// The names of the schemas whose contents should be dumped.
+	Schemas []string `yaml:"names"`
 	// The name of the file to which the dump should be written.
 	Out string `yaml:"out"`
 	// Any explicit dependencies between database objects.
@@ -39,11 +39,11 @@ type Schema struct {
 }
 
 func Parse(config Config, db *sql.DB) (*Schema, error) {
-	if config.Schema == "" {
-		config.Schema = DefaultSchema
+	if len(config.Schemas) == 0 {
+		config.Schemas = []string{DefaultSchema}
 	}
 	schema := Schema{Config: config}
-	// Load and parse each of the different types of object from the database.
+	// Load and parse each of the different types of object from the database for each schema.
 	if err := schema.Load(db); err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}

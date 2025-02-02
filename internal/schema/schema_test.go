@@ -57,7 +57,7 @@ func asMap[T schema.Sortable[string]](collections ...[]T) map[string]T {
 func TestParseEmptyDatabase(t *testing.T) {
 	t.Parallel()
 	dbtest(t, "", func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.Config{Schemas: []string{"public"}}
 		result, err := schema.Parse(config, db)
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func TestParseEmptyDatabase(t *testing.T) {
 
 func TestParseSimpleExample(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	original := query(`--sql
 CREATE DOMAIN public.score AS double precision

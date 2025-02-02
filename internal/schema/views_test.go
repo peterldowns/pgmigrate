@@ -14,7 +14,7 @@ import (
 
 func TestLoadViewsWithoutAnyViews(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		views, err := schema.LoadViews(config, db)
@@ -70,7 +70,7 @@ CREATE MATERIALIZED VIEW public.example AS
 
 func checkView(t *testing.T, definition, result string) {
 	t.Helper()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		if _, err := db.ExecContext(ctx, query(`--sql

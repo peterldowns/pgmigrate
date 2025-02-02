@@ -57,7 +57,7 @@ ADD CONSTRAINT %s
 
 func LoadConstraints(config Config, db *sql.DB) ([]*Constraint, error) {
 	var constraints []*Constraint
-	rows, err := db.Query(constraintsQuery, config.Schema)
+	rows, err := db.Query(constraintsQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ from
     left outer join extensions e
       on pg_class.oid = e.oid
     where contype in ('c', 'f', 'p', 'u', 'x')
-		and nspname = $1
+		and nspname = ANY($1)
 		and e.oid is null
 order by 1, 3, 2;
 `)
