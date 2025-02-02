@@ -29,6 +29,7 @@ bin/
 # Used while developing
 tmp/
 migrations/
+internal/private/
 
 # .pid files are sometimes created while debugging go-daemon
 *.pid
