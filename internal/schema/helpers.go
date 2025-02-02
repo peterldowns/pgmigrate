@@ -20,6 +20,8 @@ type DBObject interface {
 
 // identifier joins the parts of a sql identifier, quoting each part only if
 // necessary (if the part is not lower-case.)
+//
+// TODO: put this in pgtools, it probably belongs there
 func identifier(parts ...string) string {
 	out := make([]string, 0, len(parts))
 	for _, s := range parts {
