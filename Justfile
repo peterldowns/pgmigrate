@@ -65,7 +65,7 @@ update-version version:
   sed -i -e "s/$OLD_VERSION/$NEW_VERSION/g" **/README.md
   sed -i -e "s/pgmigrate $OLD_VERSION/pgmigrate $NEW_VERSION/g" **/go.mod
 
-# builds and pushes tbd-dbtools/migrate, tagged with :latest and :$COMMIT_SHA
+# builds local-pgmigrate, tagged with :latest and :$COMMIT_SHA
 build-docker:
   #!/usr/bin/env bash
   COMMIT_SHA=$(git rev-parse --short HEAD || echo "unknown")
