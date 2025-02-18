@@ -50,7 +50,7 @@ type Helper interface {
 // NewTestLogger returns a [TestLogger], which is a [Logger] and [Helper] (due
 // to the embedded [testing.T]) that writes all logs to a given test's output in
 // such a way that stack traces are correctly preserved.
-func NewTestLogger(t *testing.T) TestLogger {
+func NewTestLogger(t testing.TB) TestLogger {
 	return TestLogger{t}
 }
 
@@ -58,7 +58,7 @@ func NewTestLogger(t *testing.T) TestLogger {
 // to a given test's output in such a way that stack traces are correctly
 // preserved.
 type TestLogger struct {
-	*testing.T
+	testing.TB
 }
 
 // Log writes a message to a given test's output in pseudo key=value form.
@@ -68,5 +68,5 @@ func (t TestLogger) Log(_ context.Context, level LogLevel, msg string, fields ..
 	for _, field := range fields {
 		line = fmt.Sprintf("%s %s=%v", line, field.Key, field.Value)
 	}
-	t.T.Log(line)
+	t.TB.Log(line)
 }
