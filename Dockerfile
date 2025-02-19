@@ -8,7 +8,7 @@ RUN apk add build-base git
 WORKDIR $GOPATH/src/github.com/peterldowns/pgmigrate
 
 ENV GO111MODULE=on
-ENV CGO_ENABLED=1
+ENV CGO_ENABLED=0
 
 # Install the dependencies
 COPY go.mod .
