@@ -57,10 +57,11 @@ jobs:
           cache-dependency-path: go.sum
       - run: go mod download
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v6.5.0
         with:
           install-mode: "binary"
-          version: "v1.57.1"
+          version: "v1.64.5"
+          verify: true
       - name: go mod tidy
         run: go mod tidy
       - name: check for any changes

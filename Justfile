@@ -23,6 +23,7 @@ test *args='./... ./cmd/pgmigrate/...':
 
 # lint pgmigrate
 lint *args='./... ./cmd/pgmigrate/...':
+  golangci-lint config verify --config .golangci.yaml
   golangci-lint run --fix --config .golangci.yaml $@
 
 # lint nix files
