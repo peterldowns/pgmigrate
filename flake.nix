@@ -24,7 +24,7 @@
       in
       rec {
         packages = rec {
-          pgmigrate = pkgs.buildGoModule {
+          pgmigrate = pkgs.buildGo124Module {
             pname = "pgmigrate";
             version = version;
             # Every time you update your dependencies (go.mod / go.sum)  you'll
@@ -83,7 +83,7 @@
               # Go
               delve
               go-outline
-              go
+              go_1_24
               golangci-lint
               gopkgs
               gopls
