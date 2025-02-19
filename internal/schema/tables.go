@@ -165,7 +165,7 @@ func (t *Table) columnDef(c *Column, primaryKey bool, unique bool) string { //no
 
 func LoadTables(config Config, db *sql.DB) ([]*Table, error) {
 	var tables []*Table
-	rows, err := db.Query(tablesQuery, config.Schema)
+	rows, err := db.Query(tablesQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ with r as (
 		inner join pg_catalog.pg_namespace n
 		  ON n.oid = c.relnamespace
 	where c.relkind in ('r', 't', 'p')
-	and n.nspname = $1
+	and n.nspname = ANY($1)
 )
 select
 	r.oid as "table_oid",
@@ -244,7 +244,7 @@ FROM
 		and a.attnum = ad.adnum
 where
 	a.attisdropped is not true
-	  and r.schema = $1
+	  and r.schema = ANY($1)
 order by
 	"table_schema",
 	"table_name",

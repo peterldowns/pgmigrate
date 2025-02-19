@@ -39,7 +39,7 @@ func (t Trigger) String() string {
 
 func LoadTriggers(config Config, db *sql.DB) ([]*Trigger, error) {
 	var triggers []*Trigger
-	rows, err := db.Query(triggersQuery, config.Schema)
+	rows, err := db.Query(triggersQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ join pg_proc proc on proc.oid = tg.tgfoid
 left outer join extensions e on tg.oid = e.oid
 where
 	not tg.tgisinternal
-	and cls.relnamespace::regnamespace::text = $1
+	and cls.relnamespace::regnamespace::text = ANY($1)
 	and e.oid is null
 order by
 	"schema",

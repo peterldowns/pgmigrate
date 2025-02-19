@@ -407,7 +407,7 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 
 			// The [DefaultTableName] table was created correctly in the public schema.
 			publicTables, err := schema.LoadTables(schema.Config{
-				Schema: "public",
+				Schemas: []string{"public"},
 			}, db)
 			assert.Nil(t, err)
 			check.Equal(t, 1, len(publicTables))
@@ -418,7 +418,7 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			// was applied in that context, so the users table ended up in
 			// "another_schema".
 			otherTables, err := schema.LoadTables(schema.Config{
-				Schema: "another_schema",
+				Schemas: []string{"another_schema"},
 			}, db)
 			assert.Nil(t, err)
 			check.Equal(t, 3, len(otherTables))
@@ -468,7 +468,7 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 
 			// The [DefaultTableName] table was created correctly in the public schema.
 			publicTables, err := schema.LoadTables(schema.Config{
-				Schema: "public",
+				Schemas: []string{"public"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 1, len(publicTables))
@@ -476,7 +476,7 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 
 			// m1 and m2 were applied correctly and created their tables in "another_schema".
 			otherTables, err := schema.LoadTables(schema.Config{
-				Schema: "another_schema",
+				Schemas: []string{"another_schema"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(otherTables))
@@ -527,7 +527,7 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			// was still set to the default. This means that it resulted in the table "public"."users",
 			// NOT "another_schema"."users", as in the previous scenario.
 			publicTables, err = schema.LoadTables(schema.Config{
-				Schema: "public",
+				Schemas: []string{"public"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(publicTables))
@@ -537,7 +537,7 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			// Nothing has changed in "another_schema", it still has the tables
 			// created by m1 and m2.
 			otherTables, err = schema.LoadTables(schema.Config{
-				Schema: "another_schema",
+				Schemas: []string{"another_schema"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(otherTables))

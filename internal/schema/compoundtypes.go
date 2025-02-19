@@ -59,7 +59,7 @@ func (t CompoundType) String() string {
 
 func LoadCompoundTypes(config Config, db *sql.DB) ([]*CompoundType, error) {
 	var types []*CompoundType
-	rows, err := db.Query(compoundTypesQuery, config.Schema)
+	rows, err := db.Query(compoundTypesQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ FROM
   left outer join extensions e on t.oid = e.oid
 WHERE
 	e.oid is null
-	and t.typnamespace::regnamespace::text = $1
+	and t.typnamespace::regnamespace::text = ANY($1)
 	AND pg_catalog.pg_type_is_visible ( t.oid )
 	and t.typcategory = 'C'
 	and (
