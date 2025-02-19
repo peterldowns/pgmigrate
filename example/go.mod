@@ -7,7 +7,7 @@ toolchain go1.22.1
 require (
 	github.com/charmbracelet/log v0.4.0
 	github.com/lib/pq v1.10.9
-	github.com/peterldowns/pgmigrate v0.2.0
+	github.com/peterldowns/pgmigrate v0.2.1
 	github.com/peterldowns/pgtestdb v0.0.14
 	github.com/peterldowns/pgtestdb/migrators/pgmigrator v0.0.14
 	github.com/peterldowns/testy v0.0.1
