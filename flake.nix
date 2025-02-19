@@ -40,7 +40,7 @@
             #
             # (Yes, that's really how you're expected to do this.)
             #vendorHash = pkgs.lib.fakeHash;
-            vendorHash = "sha256-yffzg2giPpiAxCcVsLLrbXJSCno1axZSYctLsSTWq3Q=";
+            vendorHash = "sha256-jAYESJphYk5VBc2QP3wp6psFfzve9jWeWRfyCGXF1uE=";
             GOWORK = "off";
             src =
               let
