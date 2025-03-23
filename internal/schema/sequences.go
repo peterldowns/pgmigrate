@@ -3,6 +3,8 @@ package schema
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Followup struct {
@@ -70,8 +72,8 @@ func (s Sequence) Followup() *Followup {
 			},
 			SQL: fmt.Sprintf(
 				"ALTER SEQUENCE %s OWNED BY %s;",
-				identifier(s.Schema, s.Name),
-				identifier(s.Schema, s.TableName.String, s.ColumnName.String),
+				pgtools.Identifier(s.Schema, s.Name),
+				pgtools.Identifier(s.Schema, s.TableName.String, s.ColumnName.String),
 			),
 		}
 	}
@@ -80,7 +82,7 @@ func (s Sequence) Followup() *Followup {
 
 func (s Sequence) String() string {
 	// TODO: StartValue, MinValue, MaxValue, etc.
-	sName := identifier(s.Schema, s.Name)
+	sName := pgtools.Identifier(s.Schema, s.Name)
 	return fmt.Sprintf("CREATE SEQUENCE %s;", sName)
 }
 

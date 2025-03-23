@@ -2,6 +2,8 @@ package schema
 
 import (
 	"database/sql"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Trigger struct {
@@ -18,7 +20,7 @@ type Trigger struct {
 
 func (t Trigger) SortKey() string {
 	// Triggers on different tables may have the same name
-	return identifier(t.TableName, t.Name)
+	return pgtools.Identifier(t.TableName, t.Name)
 }
 
 func (t Trigger) DependsOn() []string {

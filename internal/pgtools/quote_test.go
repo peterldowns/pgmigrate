@@ -8,38 +8,46 @@ import (
 	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
-func TestQuoteTableExpectedInput(t *testing.T) {
+func TestLiteral(t *testing.T) {
 	t.Parallel()
-	// Designed use case: quoting the schema and table name for use in CREATE TABLE.
-	check.Equal(t, `"schema"."table"`, pgtools.QuoteTableAndSchema(`schema.table`))
-	check.Equal(t, `"table"`, pgtools.QuoteTableAndSchema(`table`))
+	check.Equal(t, `'hello'`, pgtools.Literal(`hello`))
+	check.Equal(t, `'''hello'''`, pgtools.Literal(`'hello'`))
+	check.Equal(t, `'"hello"'`, pgtools.Literal(`"hello"`))
+	check.Equal(t, ` E'abc\\def'`, pgtools.Literal(`abc\def`)) // literal \, not an escape character
+	check.Equal(t, `'schema.table'`, pgtools.Literal(`schema.table`))
 }
 
-func TestQuoteTableUnexpectedInput(t *testing.T) {
+// These tests are designed to show how the Identifier function behaves with
+// various inputs that expect to represent typical use cases.
+func TestIdentifierExpectedInputs(t *testing.T) {
 	t.Parallel()
-	// Not designed to do anything else, but here's how it behaves when the input
-	// already has quotes in it
-	//
-	// each single quote `"` gets escaped by doubling -> `""`,
-	// and the schema and table names are both quoted.
-	// (this is almost certainly not useful.)
-	check.Equal(t, `"""schema"""."""table"""`, pgtools.QuoteTableAndSchema(`"schema"."table"`))
-	check.Equal(t, `"""schema"."table"""`, pgtools.QuoteTableAndSchema(`"schema.table"`))
+	// a plain identifier without any qualification
+	check.Equal(t, `hello`, pgtools.Identifier(`hello`))
+	// a fully-dotted identifier, for use in CREATE TABLE or other DDL.
+	check.Equal(t, `someschema.sometable`, pgtools.Identifier(`someschema.sometable`))
+	// the identifier "table" is a reserved keyword and requires quoting.
+	check.Equal(t, `schema."table"`, pgtools.Identifier(`schema.table`))
+	check.Equal(t, `schema."table"`, pgtools.Identifier(`schema`, `table`))
+	// Cats contains upper-case and therefore requires quoting.
+	check.Equal(t, `schema."Cats"`, pgtools.Identifier(`schema.Cats`))
+	check.Equal(t, `schema."Cats"`, pgtools.Identifier(`schema`, `Cats`))
+	// CATS is completely upper-case and therefore requires quoting.
+	check.Equal(t, `schema."CATS"`, pgtools.Identifier(`schema.CATS`))
+	check.Equal(t, `schema."CATS"`, pgtools.Identifier(`schema`, `CATS`))
+	// user is reserved and thefore requires quoting.
+	check.Equal(t, `"user"."user"`, pgtools.Identifier(`user.user`))
+	check.Equal(t, `"user"."user"`, pgtools.Identifier(`user`, `user`))
 }
 
-func TestQuoteLiteral(t *testing.T) {
+// These tests are designed to show how the Identifier function behaves with
+// various inputs that are not typical, but could theoretically be passed to the
+// function.
+func TestIdentifierGarbageInputs(t *testing.T) {
 	t.Parallel()
-	check.Equal(t, `'hello'`, pgtools.QuoteLiteral(`hello`))
-	check.Equal(t, `'''hello'''`, pgtools.QuoteLiteral(`'hello'`))
-	check.Equal(t, `'"hello"'`, pgtools.QuoteLiteral(`"hello"`))
-	check.Equal(t, ` E'abc\\def'`, pgtools.QuoteLiteral(`abc\def`)) // literal \, not an escape character
-	check.Equal(t, `'schema.table'`, pgtools.QuoteLiteral(`schema.table`))
-}
-
-func TestQuoteIdentifier(t *testing.T) {
-	t.Parallel()
-	check.Equal(t, `"hello"`, pgtools.QuoteIdentifier(`hello`))
-	check.Equal(t, `"'hello'"`, pgtools.QuoteIdentifier(`'hello'`))
-	check.Equal(t, "\"`hello`\"", pgtools.QuoteIdentifier("`hello`"))
-	check.Equal(t, `"schema.table"`, pgtools.QuoteIdentifier(`schema.table`))
+	// any literal single quote ' is not escaped
+	check.Equal(t, `some'ide'ntifier`, pgtools.Identifier(`some'ide'ntifier`))
+	// any literal double quote " gets escaped by doubling `"` -> `""`, which
+	// requires surrounding the part with quotes as well.
+	check.Equal(t, `"""schema"""."""tablename"""`, pgtools.Identifier(`"schema"."tablename"`))
+	check.Equal(t, `"""schema"."tablename"""`, pgtools.Identifier(`"schema.tablename"`))
 }

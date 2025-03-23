@@ -89,13 +89,56 @@ CREATE EXTENSION "pg_trgm";
 	`)
 
 	expected := query(`--sql
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE DOMAIN public.score AS double precision
 CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 
+	`)
+
+	assert.Nil(t, withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.ExecContext(ctx, original); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.Equal(t, expected, result.String())
+		return nil
+	}))
+	assert.Nil(t, withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.ExecContext(ctx, expected); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.Equal(t, expected, result.String())
+		return nil
+	}))
+}
+
+func TestParseExampleWithReservedKeywords(t *testing.T) {
+	t.Parallel()
+	config := schema.Config{Schema: "public"}
+	ctx := context.Background()
+	original := query(`--sql
+create table customorders (
+	id bigint generated always as identity primary key,
+	"offset" int not null,
+	"primary" text null
+);
+`)
+	expected := query(`--sql
+CREATE TABLE public.customorders (
+  id bigint PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+  "offset" integer NOT NULL,
+  "primary" text
+);
 	`)
 
 	assert.Nil(t, withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
