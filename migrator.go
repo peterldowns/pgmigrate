@@ -149,7 +149,7 @@ func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error
 					execution_time_in_millis BIGINT NOT NULL,
 					applied_at TIMESTAMPTZ NOT NULL
 				)
-			`, pgtools.QuoteTableAndSchema(m.TableName))
+			`, pgtools.Identifier(m.TableName))
 	m.debug(ctx, query)
 	_, err := db.ExecContext(ctx, query)
 	if err != nil {
@@ -175,7 +175,7 @@ func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, e
 					SELECT FROM pg_tables
 					WHERE tablename = %s AND schemaname = %s
 				);
-			`, pgtools.QuoteLiteral(tablename), pgtools.QuoteLiteral(schema))
+			`, pgtools.Literal(tablename), pgtools.Literal(schema))
 	m.debug(ctx, query)
 	var exists bool
 	err := db.QueryRowContext(ctx, query).Scan(&exists)
@@ -261,7 +261,7 @@ func (m *Migrator) Applied(ctx context.Context, db Executor) ([]AppliedMigration
 	query := fmt.Sprintf(`
 		SELECT id, checksum, execution_time_in_millis, applied_at
 		FROM %s ORDER BY applied_at, id ASC
-	`, pgtools.QuoteTableAndSchema(m.TableName))
+	`, pgtools.Identifier(m.TableName))
 	m.debug(ctx, query)
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
@@ -332,7 +332,7 @@ func (m *Migrator) applyMigration(ctx context.Context, db Executor, migration Mi
 			( id, checksum, execution_time_in_millis, applied_at )
 			VALUES
 			( $1, $2, $3, $4 )`,
-			pgtools.QuoteTableAndSchema(m.TableName),
+			pgtools.Identifier(m.TableName),
 		)
 		m.debug(ctx, query)
 		_, err = tx.ExecContext(ctx, query, applied.ID, applied.Checksum, applied.ExecutionTimeInMillis, applied.AppliedAt)

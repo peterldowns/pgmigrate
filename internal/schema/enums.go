@@ -36,7 +36,7 @@ func (e Enum) String() string {
 	def := fmt.Sprintf("CREATE TYPE %s AS ENUM (", pgtools.Identifier(e.Schema, e.Name))
 	lastIndex := len(e.Elements) - 1
 	for i, element := range e.Elements {
-		def = fmt.Sprintf("%s\n\t%s", def, pgtools.QuoteLiteral(element))
+		def = fmt.Sprintf("%s\n\t%s", def, pgtools.Literal(element))
 		if i != lastIndex {
 			def += ","
 		}

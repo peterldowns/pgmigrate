@@ -49,7 +49,7 @@ func (v View) String() string {
 		def = def + "\n\n" + fmt.Sprintf(
 			"COMMENT ON VIEW %s IS %s;",
 			pgtools.Identifier(v.Schema, v.Name),
-			pgtools.QuoteLiteral(v.Comment.String),
+			pgtools.Literal(v.Comment.String),
 		)
 	}
 	for _, column := range v.Columns {
@@ -57,7 +57,7 @@ func (v View) String() string {
 			def = def + "\n\n" + fmt.Sprintf(
 				"COMMENT ON COLUMN %s IS %s;",
 				pgtools.Identifier(v.Schema, v.Name, column.Name),
-				pgtools.QuoteLiteral(column.Comment.String),
+				pgtools.Literal(column.Comment.String),
 			)
 		}
 	}

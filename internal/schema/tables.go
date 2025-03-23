@@ -90,7 +90,7 @@ CREATE TABLE %s (
 		tableDef += "\n\n" + fmt.Sprintf(
 			"COMMENT ON TABLE %s IS %s;",
 			pgtools.Identifier(t.Schema, t.Name),
-			pgtools.QuoteLiteral(t.Comment.String),
+			pgtools.Literal(t.Comment.String),
 		)
 	}
 
@@ -99,7 +99,7 @@ CREATE TABLE %s (
 			tableDef += "\n\n" + fmt.Sprintf(
 				"COMMENT ON COLUMN %s IS %s;",
 				pgtools.Identifier(t.Schema, t.Name, column.Name),
-				pgtools.QuoteLiteral(column.Comment.String),
+				pgtools.Literal(column.Comment.String),
 			)
 		}
 	}

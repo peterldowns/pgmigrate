@@ -61,7 +61,7 @@ func (d Data) String() string {
 			default:
 				literal = fmt.Sprintf("%v", tval)
 			}
-			values = append(values, pgtools.QuoteLiteral(literal))
+			values = append(values, pgtools.Literal(literal))
 		}
 		out += fmt.Sprintf("(%s)", strings.Join(values, ", "))
 		if i != len(d.Rows)-rowLen {
