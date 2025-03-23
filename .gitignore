@@ -48,3 +48,6 @@ lib/
 
 # golang workspace hashes
 go.work.sum
+
+# AI agents
+/CLAUDE.md
