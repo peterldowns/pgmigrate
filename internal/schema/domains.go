@@ -31,7 +31,7 @@ func (d *Domain) AddDependency(dep string) {
 }
 
 func (d Domain) String() string {
-	def := fmt.Sprintf("CREATE DOMAIN %s AS %s", identifier(d.Schema, d.Name), d.UnderlyingType)
+	def := fmt.Sprintf("CREATE DOMAIN %s AS %s", pgtools.Identifier(d.Schema, d.Name), d.UnderlyingType)
 	if d.Collation.Valid {
 		def = fmt.Sprintf("%s\nCOLLATE %s", def, pgtools.QuoteIdentifier(d.Collation.String))
 	}

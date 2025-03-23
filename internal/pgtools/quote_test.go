@@ -43,3 +43,8 @@ func TestQuoteIdentifier(t *testing.T) {
 	check.Equal(t, "\"`hello`\"", pgtools.QuoteIdentifier("`hello`"))
 	check.Equal(t, `"schema.table"`, pgtools.QuoteIdentifier(`schema.table`))
 }
+
+func TestReservedKeywords(t *testing.T) {
+	t.Parallel()
+	check.Equal(t, "public.hello", pgtools.QuoteTableAndSchema("hello"))
+}

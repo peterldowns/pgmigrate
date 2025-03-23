@@ -89,3 +89,18 @@ func QuoteTableAndSchema(name string) string {
 	}
 	return strings.Join(out, ".")
 }
+
+// Identifier joins the parts of a sql Identifier, quoting each part only if
+// necessary (if the part is not lower-case.)
+func Identifier(parts ...string) string {
+	out := make([]string, 0, len(parts))
+	for _, s := range parts {
+		lowered := strings.ToLower(s)
+		if lowered == s && !strings.ContainsRune(s, '"') {
+			out = append(out, s)
+		} else {
+			out = append(out, QuoteIdentifier(s))
+		}
+	}
+	return strings.Join(out, ".")
+}

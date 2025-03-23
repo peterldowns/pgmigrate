@@ -33,7 +33,7 @@ func (e *Enum) AddDependency(dep string) {
 }
 
 func (e Enum) String() string {
-	def := fmt.Sprintf("CREATE TYPE %s AS ENUM (", identifier(e.Schema, e.Name))
+	def := fmt.Sprintf("CREATE TYPE %s AS ENUM (", pgtools.Identifier(e.Schema, e.Name))
 	lastIndex := len(e.Elements) - 1
 	for i, element := range e.Elements {
 		def = fmt.Sprintf("%s\n\t%s", def, pgtools.QuoteLiteral(element))

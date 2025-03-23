@@ -4,8 +4,6 @@ import (
 	"strings"
 
 	"golang.org/x/exp/constraints"
-
-	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 // DBObject is an interface satisifed by [Table], [View], [Enum], etc.
@@ -16,21 +14,6 @@ type DBObject interface {
 	String() string
 	AddDependency(string)
 	DependsOn() []string
-}
-
-// identifier joins the parts of a sql identifier, quoting each part only if
-// necessary (if the part is not lower-case.)
-func identifier(parts ...string) string {
-	out := make([]string, 0, len(parts))
-	for _, s := range parts {
-		lowered := strings.ToLower(s)
-		if lowered == s && !strings.ContainsRune(s, '"') {
-			out = append(out, s)
-		} else {
-			out = append(out, pgtools.QuoteIdentifier(s))
-		}
-	}
-	return strings.Join(out, ".")
 }
 
 // query is a helper for writing sql queries that look nice in vscode when using

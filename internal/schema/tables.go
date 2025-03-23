@@ -83,13 +83,13 @@ func (t Table) String() string {
 CREATE TABLE %s (
   %s
 );
-	`), identifier(t.Schema, t.Name), strings.Join(colDefs, ",\n  "))
+	`), pgtools.Identifier(t.Schema, t.Name), strings.Join(colDefs, ",\n  "))
 	constraintsByName := asMap[string](t.Constraints)
 
 	if t.Comment.Valid {
 		tableDef += "\n\n" + fmt.Sprintf(
 			"COMMENT ON TABLE %s IS %s;",
-			identifier(t.Schema, t.Name),
+			pgtools.Identifier(t.Schema, t.Name),
 			pgtools.QuoteLiteral(t.Comment.String),
 		)
 	}
@@ -98,7 +98,7 @@ CREATE TABLE %s (
 		if column.Comment.Valid {
 			tableDef += "\n\n" + fmt.Sprintf(
 				"COMMENT ON COLUMN %s IS %s;",
-				identifier(t.Schema, t.Name, column.Name),
+				pgtools.Identifier(t.Schema, t.Name, column.Name),
 				pgtools.QuoteLiteral(column.Comment.String),
 			)
 		}
@@ -133,7 +133,7 @@ CREATE TABLE %s (
 }
 
 func (t *Table) columnDef(c *Column, primaryKey bool, unique bool) string { //nolint:revive // ignore control coupling
-	def := fmt.Sprintf("%s %s", identifier(c.Name), c.DataType)
+	def := fmt.Sprintf("%s %s", pgtools.Identifier(c.Name), c.DataType)
 	if primaryKey {
 		def = fmt.Sprintf("%s PRIMARY KEY", def)
 	} else if unique {
