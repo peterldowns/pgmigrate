@@ -81,15 +81,19 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	}
 	schema.Indexes = indexes
 
-	// Add constraints to their owning table and remove them from
-	// schema.Constraints.
 	constraints := []*Constraint{}
 	for _, con := range schema.Constraints {
-		tableName := pgtools.Identifier(con.Schema, con.TableName)
-		if table, ok := tablesByName[tableName]; ok {
-			table.Constraints = append(table.Constraints, con)
-			continue
+		// Add non-foreign-key constraints to their owning table and remove them from
+		// schema.Constraints, since they can be rendered right after the table definition.
+		if con.ForeignTableName == "" {
+			tableName := pgtools.Identifier(con.Schema, con.TableName)
+			if table, ok := tablesByName[tableName]; ok {
+				table.Constraints = append(table.Constraints, con)
+				continue
+			}
 		}
+		// If the constraint is an index, we've already handled that in the
+		// Indexes case above so just skip it.
 		indexName := pgtools.Identifier(con.Schema, con.Index)
 		if _, ok := indexesByName[indexName]; ok {
 			continue
@@ -140,12 +144,29 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	// Data object's SortKey() / Identifier is the same as its underlying table
 	// so we can just look up the table's dependencies.
 	for _, data := range schema.Data {
-		did := pgtools.Identifier(data.Schema, data.Name)
-		if obj, ok := byName[did]; ok {
-			for _, dep := range obj.DependsOn() {
-				data.AddDependency(dep)
+		tableId := pgtools.Identifier(data.Schema, data.Name)
+		table, ok := tablesByName[tableId]
+		if !ok {
+			continue
+		}
+		data.dependencies = table.DependsOn()
+		for _, constraint := range table.Constraints {
+			if constraint.ForeignTableName != "" {
+				data.AddDependency(pgtools.Identifier(constraint.ForeignTableSchema, constraint.ForeignTableName))
 			}
 		}
+		for _, constraint := range schema.Constraints {
+			constraintTableId := pgtools.Identifier(constraint.Schema, constraint.TableName)
+			if tableId == constraintTableId && constraint.ForeignTableName != "" {
+				data.AddDependency(pgtools.Identifier(constraint.ForeignTableSchema, constraint.ForeignTableName))
+			}
+		}
+
+		// if obj, ok := byName[tableId]; ok {
+		// 	for _, dep := range obj.DependsOn() {
+		// 		data.AddDependency(dep)
+		// 	}
+		// }
 	}
 
 	schema.Sort()

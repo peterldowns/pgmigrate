@@ -92,14 +92,14 @@ CREATE SCHEMA IF NOT EXISTS aaa;
 
 CREATE SCHEMA IF NOT EXISTS bbb;
 
-CREATE TABLE public.cats (
-  name text PRIMARY KEY NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
 CREATE TABLE aaa.dogs (
   name text PRIMARY KEY NOT NULL,
   enemy_cat_name text
+);
+
+CREATE TABLE public.cats (
+  name text PRIMARY KEY NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 ALTER TABLE aaa.dogs
