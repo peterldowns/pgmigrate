@@ -3,6 +3,8 @@ package schema
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Function struct {
@@ -21,7 +23,7 @@ type Function struct {
 }
 
 func (f Function) SortKey() string {
-	return f.Name
+	return pgtools.Identifier(f.Schema, f.Name)
 }
 
 func (f Function) DependsOn() []string {
@@ -39,7 +41,7 @@ func (f Function) String() string {
 func LoadFunctions(config Config, db *sql.DB) ([]*Function, error) {
 	var functions []*Function
 
-	rows, err := db.Query(functionsQuery, config.Schema)
+	rows, err := db.Query(functionsQuery, config.Schemas)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +132,7 @@ select
 	f.definition
 from functions f
 where
-	schema = $1
+	schema = ANY($1)
 order by
 	"schema",
 	"name"

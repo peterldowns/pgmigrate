@@ -14,7 +14,7 @@ import (
 
 func TestLoadExtensionsSucceedsWithoutAnyExtensions(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		extensions, err := schema.LoadExtensions(config, db)
@@ -37,7 +37,7 @@ func TestLoadExtensionRoundtrips(t *testing.T) {
 
 func checkExtension(t *testing.T, definition, result string) {
 	t.Helper()
-	config := schema.Config{Schema: "public"}
+	config := schema.Config{Schemas: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		if _, err := db.ExecContext(ctx, definition); err != nil {
