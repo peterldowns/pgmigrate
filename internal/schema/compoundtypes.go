@@ -33,7 +33,7 @@ type CompoundType struct {
 }
 
 func (t CompoundType) SortKey() string {
-	return t.Name
+	return pgtools.Identifier(t.Schema, t.Name)
 }
 
 func (t CompoundType) DependsOn() []string {

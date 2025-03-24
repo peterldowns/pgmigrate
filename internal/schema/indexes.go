@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/lib/pq"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Index struct {
@@ -34,13 +36,13 @@ type Index struct {
 }
 
 func (i Index) SortKey() string {
-	return i.Name
+	return pgtools.Identifier(i.Schema, i.Name)
 }
 
 func (i Index) DependsOn() []string {
 	return append(
 		i.dependencies,
-		i.TableName,
+		pgtools.Identifier(i.Schema, i.TableName),
 	)
 }
 
@@ -66,7 +68,7 @@ func LoadIndexes(config Config, db *sql.DB) ([]*Index, error) {
 			&index.TableName,
 			&index.Name,
 			&index.Definition,
-			pq.Array(&index.IndexColumns), // TODO: use pgx types instead?
+			pq.Array(&index.IndexColumns),
 			&index.KeyOptions,
 			&index.TotalColumnCount,
 			&index.KeyColumnCount,

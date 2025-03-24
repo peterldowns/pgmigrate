@@ -22,19 +22,19 @@ type Table struct {
 }
 
 func (t Table) SortKey() string {
-	return t.Name
+	return pgtools.Identifier(t.Schema, t.Name)
 }
 
 func (t Table) DependsOn() []string {
 	out := t.Dependencies
 	for _, constraint := range t.Constraints {
 		if constraint.ForeignTableName != "" {
-			out = append(out, constraint.ForeignTableName)
+			out = append(out, pgtools.Identifier(constraint.ForeignTableSchema, constraint.ForeignTableName))
 		}
 	}
 	for _, trig := range t.Triggers {
 		if trig.ProcName != "" {
-			out = append(out, trig.ProcName)
+			out = append(out, pgtools.Identifier(trig.ProcSchema, trig.ProcName))
 		}
 	}
 	return out
@@ -111,13 +111,13 @@ CREATE TABLE %s (
 		if uniqueIndexes[index.SortKey()] {
 			continue
 		}
-		if _, ok := constraintsByName[index.Name]; ok {
+		if _, ok := constraintsByName[index.SortKey()]; ok {
 			continue
 		}
 		tableDef += "\n\n" + index.String()
 	}
 	for _, con := range t.Constraints {
-		if uniqueIndexes[con.Name] {
+		if uniqueIndexes[con.SortKey()] {
 			continue
 		}
 		tableDef += "\n\n" + con.String()

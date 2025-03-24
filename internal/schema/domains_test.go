@@ -61,10 +61,10 @@ func TestDependentDomains(t *testing.T) {
 	config := schema.Config{
 		Schemas: []string{"public"},
 		Dependencies: map[string][]string{
-			"ddd": {"zzz"},
-			"ccc": {"zzz"},
-			"aaa": {"ccc"},
-			"qqq": {"vvv"},
+			"public.ddd": {"public.zzz"},
+			"public.ccc": {"public.zzz"},
+			"public.aaa": {"public.ccc"},
+			"public.qqq": {"public.vvv"},
 		},
 	}
 	definition := query(`--sql

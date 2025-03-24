@@ -21,7 +21,7 @@ type Enum struct {
 }
 
 func (e Enum) SortKey() string {
-	return e.Name
+	return pgtools.Identifier(e.Schema, e.Name)
 }
 
 func (e Enum) DependsOn() []string {

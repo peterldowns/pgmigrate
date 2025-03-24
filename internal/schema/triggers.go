@@ -19,14 +19,14 @@ type Trigger struct {
 }
 
 func (t Trigger) SortKey() string {
-	// Triggers on different tables may have the same name
 	return pgtools.Identifier(t.TableName, t.Name)
 }
 
 func (t Trigger) DependsOn() []string {
-	out := append(t.dependencies, t.TableName) //nolint:gocritic // appendAssign
+	out := t.dependencies
+	out = append(out, pgtools.Identifier(t.Schema, t.TableName))
 	if t.ProcName != "" {
-		out = append(out, t.ProcName)
+		out = append(out, pgtools.Identifier(t.ProcSchema, t.ProcName))
 	}
 	return out
 }

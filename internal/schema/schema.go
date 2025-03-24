@@ -52,8 +52,9 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	// Assign dependencies between objects.
 	byName := schema.ObjectsByName()
 	for _, dep := range schema.Dependencies {
-		if obj, ok := byName[dep.Object.Name]; ok {
-			obj.AddDependency(dep.DependsOn.Name)
+		objName := pgtools.Identifier(dep.Object.Schema, dep.Object.Name)
+		if obj, ok := byName[objName]; ok {
+			obj.AddDependency(pgtools.Identifier(dep.DependsOn.Schema, dep.DependsOn.Name))
 		}
 	}
 	for name, deps := range config.Dependencies {
@@ -67,11 +68,12 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	}
 
 	// Add indexes to their owning table and remove them from schema.Index.
-	tablesByName := asMap[string](schema.Tables)
-	indexesByName := asMap[string](schema.Indexes)
+	tablesByName := asMap(schema.Tables)
+	indexesByName := asMap(schema.Indexes)
 	indexes := []*Index{}
 	for _, index := range schema.Indexes {
-		if table, ok := tablesByName[index.TableName]; ok {
+		tableName := pgtools.Identifier(index.Schema, index.TableName)
+		if table, ok := tablesByName[tableName]; ok {
 			table.Indexes = append(table.Indexes, index)
 		} else {
 			indexes = append(indexes, index)
@@ -83,13 +85,13 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	// schema.Constraints.
 	constraints := []*Constraint{}
 	for _, con := range schema.Constraints {
-		if con.ForeignTableName == "" {
-			if table, ok := tablesByName[con.TableName]; ok {
-				table.Constraints = append(table.Constraints, con)
-				continue
-			}
+		tableName := pgtools.Identifier(con.Schema, con.TableName)
+		if table, ok := tablesByName[tableName]; ok {
+			table.Constraints = append(table.Constraints, con)
+			continue
 		}
-		if _, ok := indexesByName[con.Index]; ok {
+		indexName := pgtools.Identifier(con.Schema, con.Index)
+		if _, ok := indexesByName[indexName]; ok {
 			continue
 		}
 		constraints = append(constraints, con)
@@ -101,7 +103,8 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	sequences := []*Sequence{}
 	for _, seq := range schema.Sequences {
 		if seq.TableName.Valid {
-			if table, ok := tablesByName[seq.TableName.String]; ok {
+			tableName := pgtools.Identifier(seq.Schema, seq.TableName.String)
+			if table, ok := tablesByName[tableName]; ok {
 				table.Sequences = append(table.Sequences, seq)
 				if seq.ColumnName.Valid {
 					colName := seq.ColumnName.String
@@ -122,13 +125,28 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	// Add triggers to their owning table and remove them from schema.Triggers.
 	remTriggers := []*Trigger{}
 	for _, trig := range schema.Triggers {
-		if table, ok := tablesByName[trig.TableName]; ok {
+		tableName := pgtools.Identifier(trig.Schema, trig.TableName)
+		if table, ok := tablesByName[tableName]; ok {
 			table.Triggers = append(table.Triggers, trig)
 			continue
 		}
 		remTriggers = append(remTriggers, trig)
 	}
 	schema.Triggers = remTriggers
+
+	// Inserting data can involve inserting foreign keys, which must respect
+	// foreign key constraints at the time of insertion. So, make sure Data
+	// inserts happen in the same order as the tables they're referencing — a
+	// Data object's SortKey() / Identifier is the same as its underlying table
+	// so we can just look up the table's dependencies.
+	for _, data := range schema.Data {
+		did := pgtools.Identifier(data.Schema, data.Name)
+		if obj, ok := byName[did]; ok {
+			for _, dep := range obj.DependsOn() {
+				data.AddDependency(dep)
+			}
+		}
+	}
 
 	schema.Sort()
 	return &schema, nil
@@ -137,18 +155,18 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 // Sort orders each type of database objects into creation order. Does not
 // perform a global ordering on the different types.
 func (s *Schema) Sort() {
-	s.Extensions = Sort[string](s.Extensions)
-	s.Domains = Sort[string](s.Domains)
-	s.CompoundTypes = Sort[string](s.CompoundTypes)
-	s.Enums = Sort[string](s.Enums)
-	s.Functions = Sort[string](s.Functions)
-	s.Tables = Sort[string](s.Tables)
-	s.Views = Sort[string](s.Views)
-	s.Sequences = Sort[string](s.Sequences)
-	s.Indexes = Sort[string](s.Indexes)
-	s.Constraints = Sort[string](s.Constraints)
-	s.Triggers = Sort[string](s.Triggers)
-	s.Data = Sort[string](s.Data)
+	s.Extensions = Sort(s.Extensions)
+	s.Domains = Sort(s.Domains)
+	s.CompoundTypes = Sort(s.CompoundTypes)
+	s.Enums = Sort(s.Enums)
+	s.Functions = Sort(s.Functions)
+	s.Tables = Sort(s.Tables)
+	s.Views = Sort(s.Views)
+	s.Sequences = Sort(s.Sequences)
+	s.Indexes = Sort(s.Indexes)
+	s.Constraints = Sort(s.Constraints)
+	s.Triggers = Sort(s.Triggers)
+	s.Data = Sort(s.Data)
 }
 
 // Load queries the database and populates the slices of database objects. It
@@ -250,7 +268,7 @@ func (s *Schema) ObjectsByName() map[string]DBObject {
 		objects = append(objects, obj)
 	}
 
-	return asMap[string](objects)
+	return asMap(objects)
 }
 
 // String returns the contents of schema file that can be applied with `psql` to
@@ -347,7 +365,7 @@ func (s *Schema) String() string {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	sortable = Sort[string](sortable)
+	sortable = Sort(sortable)
 	for _, obj := range sortable {
 		out.WriteString(obj.String())
 		out.WriteString("\n\n")

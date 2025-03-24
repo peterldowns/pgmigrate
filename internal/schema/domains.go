@@ -19,7 +19,7 @@ type Domain struct {
 }
 
 func (d Domain) SortKey() string {
-	return d.Name
+	return pgtools.Identifier(d.Schema, d.Name)
 }
 
 func (d Domain) DependsOn() []string {

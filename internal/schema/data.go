@@ -11,19 +11,24 @@ import (
 )
 
 type Data struct {
-	Schema  string   `yaml:"schema"`
-	Name    string   `yaml:"name"`
-	Columns []string `yaml:"columns"`
-	OrderBy string   `yaml:"orderBy"`
-	rows    []any
+	Schema       string   `yaml:"schema"`
+	Name         string   `yaml:"name"`
+	Columns      []string `yaml:"columns"`
+	OrderBy      string   `yaml:"orderBy"`
+	rows         []any
+	dependencies []string
 }
 
 func (d Data) SortKey() string {
-	return d.Name
+	return pgtools.Identifier(d.Schema, d.Name)
 }
 
-func (Data) DependsOn() []string {
-	return nil
+func (d *Data) AddDependency(dep string) {
+	d.dependencies = append(d.dependencies, dep)
+}
+
+func (d Data) DependsOn() []string {
+	return d.dependencies
 }
 
 // from pgx: https://github.com/jackc/pgtype/blob/6830cc09847cfe17ae59177e7f81b67312496108/timestamptz.go#L152
@@ -122,7 +127,6 @@ and c.relname like $2;
 select %s
 from %s
 		`), cols, pgtools.Identifier(d.Schema, d.Name))
-		// TODO: ^ needs the identifier escape fix from pgtestdb
 		if d.OrderBy != "" {
 			q += "\norder by " + d.OrderBy
 		}

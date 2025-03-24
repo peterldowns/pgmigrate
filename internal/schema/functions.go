@@ -3,6 +3,8 @@ package schema
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Function struct {
@@ -21,7 +23,7 @@ type Function struct {
 }
 
 func (f Function) SortKey() string {
-	return f.Name
+	return pgtools.Identifier(f.Schema, f.Name)
 }
 
 func (f Function) DependsOn() []string {

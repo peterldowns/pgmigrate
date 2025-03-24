@@ -19,7 +19,7 @@ type View struct {
 }
 
 func (v View) SortKey() string {
-	return v.Name
+	return pgtools.Identifier(v.Schema, v.Name)
 }
 
 func (v View) DependsOn() []string {

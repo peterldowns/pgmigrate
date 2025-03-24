@@ -27,17 +27,17 @@ type Constraint struct {
 }
 
 func (c Constraint) SortKey() string {
-	return c.Name
+	return pgtools.Identifier(c.Schema, c.Name)
 }
 
 func (c *Constraint) DependsOn() []string {
 	deps := append(c.dependencies, c.TableName) //nolint:gocritic // appendAssign
 	if c.ForeignTableName != "" {
-		deps = append(deps, c.ForeignTableName)
+		deps = append(deps, pgtools.Identifier(c.ForeignTableSchema, c.ForeignTableName))
 	}
-	if c.Index != "" {
-		deps = append(deps, c.Index)
-	}
+	// if c.Index != "" {
+	// 	deps = append(deps, pgtools.Identifier(c.Schema, c.Index))
+	// }
 	return deps
 }
 

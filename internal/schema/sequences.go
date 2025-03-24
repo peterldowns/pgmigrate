@@ -48,7 +48,7 @@ type Sequence struct {
 }
 
 func (s Sequence) SortKey() string {
-	return s.Name
+	return pgtools.Identifier(s.Schema, s.Name)
 }
 
 func (s Sequence) DependsOn() []string {

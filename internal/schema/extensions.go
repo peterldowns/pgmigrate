@@ -17,7 +17,7 @@ type Extension struct {
 }
 
 func (e Extension) SortKey() string {
-	return e.Name // TODO: need to put schema on every sort key
+	return pgtools.Identifier(e.Schema, e.Name)
 }
 
 func (e Extension) DependsOn() []string {
