@@ -37,7 +37,7 @@ func (d Data) String() string {
 	if len(d.rows) == 0 || len(d.Columns) == 0 {
 		return ""
 	}
-	prelude := fmt.Sprintf("INSERT INTO %s (%s) VALUES\n", identifier(d.Schema, d.Name), strings.Join(d.Columns, ", "))
+	prelude := fmt.Sprintf("INSERT INTO %s (%s) VALUES\n", pgtools.Identifier(d.Schema, d.Name), strings.Join(d.Columns, ", "))
 	rowLen := len(d.Columns)
 	out := prelude
 	for i := 0; i < len(d.rows); i += rowLen {
@@ -61,7 +61,7 @@ func (d Data) String() string {
 			default:
 				literal = fmt.Sprintf("%v", tval)
 			}
-			values = append(values, pgtools.QuoteLiteral(literal))
+			values = append(values, pgtools.Literal(literal))
 		}
 		out += fmt.Sprintf("(%s)", strings.Join(values, ", "))
 		if i != len(d.rows)-rowLen {
@@ -121,7 +121,7 @@ and c.relname like $2;
 		q := fmt.Sprintf(query(`--sql
 select %s
 from %s
-		`), cols, identifier(d.Schema, d.Name))
+		`), cols, pgtools.Identifier(d.Schema, d.Name))
 		// TODO: ^ needs the identifier escape fix from pgtestdb
 		if d.OrderBy != "" {
 			q += "\norder by " + d.OrderBy

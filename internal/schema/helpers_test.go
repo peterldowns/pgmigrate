@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/peterldowns/testy/check"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 func TestIdentifiersDoesntQuote(t *testing.T) {
@@ -17,7 +19,7 @@ func TestIdentifiersDoesntQuote(t *testing.T) {
 		`single'quotes'`,
 	}
 	for _, tc := range cases {
-		check.Equal(t, tc, identifier(tc))
+		check.Equal(t, tc, pgtools.Identifier(tc))
 	}
 }
 
@@ -31,6 +33,6 @@ func TestIdentifiersQuotes(t *testing.T) {
 		{`∆."foo""bar"`, []string{"∆", `foo"bar`}},
 	}
 	for _, tc := range cases {
-		check.Equal(t, tc.expected, identifier(tc.parts...))
+		check.Equal(t, tc.expected, pgtools.Identifier(tc.parts...))
 	}
 }

@@ -1,7 +1,7 @@
 version: "3.6"
 services:
   appdb:
-    image: postgres:15
+    image: postgres:17
     environment:
       POSTGRES_USER: appuser
       POSTGRES_DB: exampleapp
@@ -10,7 +10,7 @@ services:
     ports:
       - "5435:5432"
   testdb:
-    image: postgres:15
+    image: postgres:17
     environment:
       POSTGRES_USER: appuser
       POSTGRES_DB: testdb

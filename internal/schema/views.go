@@ -33,9 +33,9 @@ func (v *View) AddDependency(dep string) {
 func (v View) String() string {
 	var def string
 	if v.IsMaterialized {
-		def = fmt.Sprintf("CREATE MATERIALIZED VIEW %s AS", identifier(v.Schema, v.Name))
+		def = fmt.Sprintf("CREATE MATERIALIZED VIEW %s AS", pgtools.Identifier(v.Schema, v.Name))
 	} else {
-		def = fmt.Sprintf("CREATE VIEW %s AS", identifier(v.Schema, v.Name))
+		def = fmt.Sprintf("CREATE VIEW %s AS", pgtools.Identifier(v.Schema, v.Name))
 	}
 	// The definition is not pretty printed, but has strange indentation rules:
 	// - 1 leading space before the beginning SELECT
@@ -48,16 +48,16 @@ func (v View) String() string {
 	if v.Comment.Valid {
 		def = def + "\n\n" + fmt.Sprintf(
 			"COMMENT ON VIEW %s IS %s;",
-			identifier(v.Schema, v.Name),
-			pgtools.QuoteLiteral(v.Comment.String),
+			pgtools.Identifier(v.Schema, v.Name),
+			pgtools.Literal(v.Comment.String),
 		)
 	}
 	for _, column := range v.Columns {
 		if column.Comment.Valid {
 			def = def + "\n\n" + fmt.Sprintf(
 				"COMMENT ON COLUMN %s IS %s;",
-				identifier(v.Schema, v.Name, column.Name),
-				pgtools.QuoteLiteral(column.Comment.String),
+				pgtools.Identifier(v.Schema, v.Name, column.Name),
+				pgtools.Literal(column.Comment.String),
 			)
 		}
 	}

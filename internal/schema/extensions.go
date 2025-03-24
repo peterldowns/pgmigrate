@@ -29,7 +29,7 @@ func (e *Extension) AddDependency(dep string) {
 }
 
 func (e Extension) String() string {
-	def := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", pgtools.QuoteIdentifier(e.Name))
+	def := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", pgtools.Identifier(e.Name))
 	return def
 }
 

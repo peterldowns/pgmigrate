@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/lib/pq"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Constraint struct {
@@ -49,8 +51,8 @@ ALTER TABLE %s
 ADD CONSTRAINT %s
 %s;
 	`),
-		identifier(c.Schema, c.TableName),
-		identifier(c.Name),
+		pgtools.Identifier(c.Schema, c.TableName),
+		pgtools.Identifier(c.Name),
 		c.Definition,
 	)
 }

@@ -35,9 +35,9 @@ SELECT * from dogs;
 	`)
 	result := query(`--sql
 CREATE VIEW public.foobar AS
-   SELECT dogs.id,
-    dogs.name,
-    dogs.enemy_id
+   SELECT id,
+    name,
+    enemy_id
    FROM dogs;
 `)
 	checkView(t, original, result)

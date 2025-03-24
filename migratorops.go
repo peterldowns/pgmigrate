@@ -72,7 +72,7 @@ func (m *Migrator) MarkApplied(
 				INSERT INTO %s ( id, checksum, execution_time_in_millis, applied_at )
 				VALUES ( $1, $2, $3, $4 )
 				ON CONFLICT DO NOTHING;`,
-				pgtools.QuoteTableAndSchema(m.TableName),
+				pgtools.Identifier(m.TableName),
 			)
 			_, err := tx.ExecContext(ctx, query, ma.ID, ma.Checksum, ma.ExecutionTimeInMillis, ma.AppliedAt)
 			if err != nil {
@@ -149,7 +149,7 @@ func (m *Migrator) MarkUnapplied(
 	if err := m.inTx(ctx, db, func(tx *sql.Tx) error {
 		query := fmt.Sprintf(`
 			DELETE FROM %s WHERE id = any($1) RETURNING *;
-		`, pgtools.QuoteTableAndSchema(m.TableName))
+		`, pgtools.Identifier(m.TableName))
 		rows, err := tx.QueryContext(ctx, query, toRemove)
 		if err != nil {
 			return err
@@ -251,7 +251,7 @@ func (m *Migrator) SetChecksums(
 			}
 			query := fmt.Sprintf(
 				`UPDATE %s SET checksum = $1 where id = $2 and checksum != $1`,
-				pgtools.QuoteTableAndSchema(m.TableName),
+				pgtools.Identifier(m.TableName),
 			)
 			m.debug(ctx, query)
 			_, err := tx.ExecContext(ctx, query, migration.Checksum, migration.ID)

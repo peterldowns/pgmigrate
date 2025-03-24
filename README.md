@@ -1,6 +1,6 @@
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.2.1/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.3.0/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 pgmigrate is a modern Postgres migrations CLI and golang library. It is
@@ -504,6 +504,35 @@ options, but `exec` should work by default.
 
 As of v0.1.0, the CLI will automatically add this query parameter for you if you
 haven't already specified a statement caching mode.
+
+## Configuring Postgres Timeouts for Locks, Statements, and Transactions
+
+`pgmigrate` supports configuring various timeouts through the `postgres://...` connection string, just like any other Postgres client. I recommend you make sure to configure these options to prevent your migrations from hanging indefinitely, which potentially could impact your existing software also attempting to serve customer requests from the same database.
+
+Depending on the version of Postgres your server is running, you may need to specify slightly different parameter names. No matter which version, you can do so in the URL passed via the `--database` CLI flag or via the `database:` value in the `.pgmigrate.yaml` config file.
+
+```
+postgres://user:password@host:port/dbname?statement_timeout=1000&lock_timeout=100&transaction_timeout=3000
+```
+
+[You can see the current list of supported timeout options here, at the Postgres docs](https://www.postgresql.org/docs/current/runtime-config-client.html). As of [Postgres 17](https://www.postgresql.org/docs/17/runtime-config-client.html), the options are:
+
+- `statement_timeout` (integer):
+  > Abort any statement that takes more than the specified amount of time. If log_min_error_statement is set to ERROR or lower, the statement that timed out will also be logged. If this value is specified without units, it is taken as milliseconds. A value of zero (the default) disables the timeout.
+- `transaction_timeout` (integer):
+  > Terminate any session that spans longer than the specified amount of time in a transaction. The limit applies both to explicit transactions (started with BEGIN) and to an implicitly started transaction corresponding to a single statement. If this value is specified without units, it is taken as milliseconds. A value of zero (the default) disables the timeout.
+- `lock_timeout` (integer):
+  > Abort any statement that waits longer than the specified amount of time while attempting to acquire a lock on a table, index, row, or other database object. The time limit applies separately to each lock acquisition attempt. The limit applies both to explicit locking requests (such as LOCK TABLE, or SELECT FOR UPDATE without NOWAIT) and to implicitly-acquired locks. If this value is specified without units, it is taken as milliseconds. A value of zero (the default) disables the timeout.
+- `idle_in_transaction_session_timeout` (integer):
+  > Terminate any session that has been idle (that is, waiting for a client query) within an open transaction for longer than the specified amount of time. If this value is specified without units, it is taken as milliseconds. A value of zero (the default) disables the timeout.
+- `idle_session_timeout` (integer):
+  > Terminate any session that has been idle (that is, waiting for a client query), but not within an open transaction, for longer than the specified amount of time. If this value is specified without units, it is taken as milliseconds. A value of zero (the default) disables the timeout.
+
+Remember that when `pgmigrate` connects to your database, it will attempt to acquire a session lock (so that if you have multiple app servers starting up at once, only one of them runs the migrations), and then once it has a connection with that session lock, it will run each pending migration in its own transaction.
+
+Most likely you'll want to set the `transaction_timeout` option in order to guard against the case where a migration takes an unexpectedly long amount of time and preventing Postgres from serving requests by your existing app servers.
+
+Because each migration is run inside of its own transaction, you can always modify these timeouts for a specific migration by adding `SET LOCAL` commands to the beginning of the migration file. Be very careful to use `SET LOCAL` (which updates the configuration values for the current transaction) rather than `SET`, which updates the configuration values for the current connection. For more information, [see the Postgres docs on `SET`](https://www.postgresql.org/docs/current/sql-set.html).
 
 # Acknowledgements
 

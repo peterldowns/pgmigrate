@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type CompoundTypeColumn struct {
@@ -47,10 +49,10 @@ func (t *CompoundType) AddDependency(dep string) {
 }
 
 func (t CompoundType) String() string {
-	out := fmt.Sprintf("CREATE TYPE %s AS (\n", identifier(t.Schema, t.Name))
+	out := fmt.Sprintf("CREATE TYPE %s AS (\n", pgtools.Identifier(t.Schema, t.Name))
 	colDefs := make([]string, 0, len(t.Columns))
 	for _, col := range t.Columns {
-		colDefs = append(colDefs, fmt.Sprintf("  %s %s", identifier(col.Name), col.Type))
+		colDefs = append(colDefs, fmt.Sprintf("  %s %s", pgtools.Identifier(col.Name), col.Type))
 	}
 	out += strings.Join(colDefs, ",\n")
 	out += "\n);"

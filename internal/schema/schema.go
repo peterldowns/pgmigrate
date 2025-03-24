@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 const DefaultSchema = "public"
@@ -365,5 +367,5 @@ func (s *Schema) String() string {
 }
 
 func schemaDefinition(schemaName string) string {
-	return fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", identifier(schemaName))
+	return fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", pgtools.Identifier(schemaName))
 }

@@ -1,8 +1,11 @@
 package pgtools
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-// QuoteLiteral and QuoteIdentifier contains are derived almost exactly from
+// Literal and Identifier contains are derived almost exactly from
 // lib/pq, which is released under the MIT License.
 // https://github.com/lib/pq
 //
@@ -27,17 +30,14 @@ import "strings"
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// quoteLiteral quotes a 'literal' (e.g. a parameter, often used to pass literal
-// to DDL and other statements that do not accept parameters) to be used as part
-// of an SQL statement.  For example:
-//
-//	exp_date := pq.quoteLiteral("2023-01-05 15:00:00Z")
-//	err := db.Exec(fmt.Sprintf("CREATE ROLE my_user VALID UNTIL %s", exp_date))
+// Literal quotes a 'literal' (e.g. a parameter, often used to pass literal to
+// DDL and other statements that do not accept parameters) to be used as part of
+// an SQL statement.
 //
 // Any single quotes in name will be escaped. Any backslashes (i.e. "\") will be
 // replaced by two backslashes (i.e. "\\") and the C-style escape identifier
 // that PostgreSQL provides ('E') will be prepended to the string.
-func QuoteLiteral(literal string) string {
+func Literal(literal string) string {
 	// This follows the PostgreSQL internal algorithm for handling quoted literals
 	// from libpq, which can be found in the "PQEscapeStringInternal" function,
 	// which is found in the libpq/fe-exec.c source file:
@@ -54,38 +54,47 @@ func QuoteLiteral(literal string) string {
 		literal = strings.ReplaceAll(literal, `\`, `\\`)
 		literal = ` E'` + literal + `'`
 	} else {
-		// otherwise, we can just wrap the literal with a pair of single quotes
 		literal = `'` + literal + `'`
 	}
 	return literal
 }
 
-// QuoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be
-// used as part of an SQL statement.  For example:
+// Identifier quotes an identifier (a name of an object — a table, a column, a
+// function, a type, a schema, etc.) for use in a DDL statement defining or
+// referencing that object. It will return the same identifier if possible, only
+// introducing quotes or modifications when:
 //
-//	tblname := "my_table"
-//	data := "my_data"
-//	quoted := pq.quoteIdentifier(tblname)
-//	err := db.Exec(fmt.Sprintf("INSERT INTO %s VALUES ($1)", quoted), data)
+//   - the identifier has an upper-case character
+//   - the identifier is a reserved keyword in PostgreSQL, or is non-reserved
+//     but requires quoting in some contexts (when used as a column name, used as
+//     a type name, or used as a function name)
 //
-// Any double quotes in name will be escaped.  The quoted identifier will be
-// case sensitive when used in a query.  If the input string contains a zero
-// byte, the result will be truncated immediately before it.
-func QuoteIdentifier(name string) string {
-	end := strings.IndexRune(name, 0)
-	if end > -1 {
-		name = name[:end]
+// For convenience, Identifier allows you to pass the parts of a fully-qualified
+// "dotted" identifier, or a single un-split dotted identifier.
+func Identifier(parts ...string) string {
+	if len(parts) == 1 {
+		parts = strings.Split(parts[0], ".")
 	}
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
-}
-
-// QuoteTableAndSchema quotes the name of a table, optionally including a schema prefix
-// separated by a literal `.`, for use in statements like `CREATE TABLE`.
-func QuoteTableAndSchema(name string) string {
-	parts := strings.Split(name, ".")
-	var out []string
-	for _, part := range parts {
-		out = append(out, QuoteIdentifier(part))
+	out := make([]string, 0, len(parts))
+	for _, identifier := range parts {
+		if requiresQuoting(identifier) {
+			identifier = fmt.Sprintf(`"%s"`, strings.ReplaceAll(identifier, `"`, `""`))
+		}
+		out = append(out, identifier)
 	}
 	return strings.Join(out, ".")
+}
+
+func requiresQuoting(identifier string) bool {
+	lowered := strings.ToLower(identifier)
+	if lowered != identifier {
+		return true
+	}
+	if _, ok := postgresKeywords[lowered]; ok {
+		return true
+	}
+	if strings.ContainsRune(lowered, '"') {
+		return true
+	}
+	return false
 }

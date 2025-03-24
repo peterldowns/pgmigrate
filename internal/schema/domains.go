@@ -31,9 +31,9 @@ func (d *Domain) AddDependency(dep string) {
 }
 
 func (d Domain) String() string {
-	def := fmt.Sprintf("CREATE DOMAIN %s AS %s", identifier(d.Schema, d.Name), d.UnderlyingType)
+	def := fmt.Sprintf("CREATE DOMAIN %s AS %s", pgtools.Identifier(d.Schema, d.Name), d.UnderlyingType)
 	if d.Collation.Valid {
-		def = fmt.Sprintf("%s\nCOLLATE %s", def, pgtools.QuoteIdentifier(d.Collation.String))
+		def = fmt.Sprintf("%s\nCOLLATE %s", def, pgtools.Identifier(d.Collation.String))
 	}
 	if d.Default.Valid {
 		def = fmt.Sprintf("%s\nDEFAULT %s", def, d.Default.String)
@@ -97,6 +97,11 @@ select
 			pg_catalog.pg_get_constraintdef(r.oid, true)
 		from pg_catalog.pg_constraint r
 		where t.oid = r.contypid
+		-- Work around bug in Postgres 17.0, 17.1, 17.2; fixed in 17.3, see
+		-- https://git.postgresql.org/cgit/postgresql.git/commit/?id=09d09d4297b9acbc2848ec35e8bf030d6c1fae18 —
+		-- and
+		-- https://www.postgresql.org/docs/release/17.3/ (search: pg_get_constraintdef)
+		and r.contype != 'n'
 	), ' ') as "check_constraints"
 from pg_catalog.pg_type t
 left join pg_catalog.pg_namespace n

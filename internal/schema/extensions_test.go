@@ -30,7 +30,7 @@ func TestLoadExtensionsSucceedsWithoutAnyExtensions(t *testing.T) {
 func TestLoadExtensionRoundtrips(t *testing.T) {
 	t.Parallel()
 	original := "CREATE EXTENSION pgcrypto;"
-	result := `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`
+	result := `CREATE EXTENSION IF NOT EXISTS pgcrypto;`
 	checkExtension(t, original, result)
 	checkExtension(t, result, result)
 }
