@@ -534,6 +534,13 @@ Most likely you'll want to set the `transaction_timeout` option in order to guar
 
 Because each migration is run inside of its own transaction, you can always modify these timeouts for a specific migration by adding `SET LOCAL` commands to the beginning of the migration file. Be very careful to use `SET LOCAL` (which updates the configuration values for the current transaction) rather than `SET`, which updates the configuration values for the current connection. For more information, [see the Postgres docs on `SET`](https://www.postgresql.org/docs/current/sql-set.html).
 
+### pgmigrate's timeouts
+
+pgmigrate uses session/advisory locks to make sure that your migrations are only applied once. Additionally, it will run other query logic (opening/closing transactions around each of your migrations, updating the applied-migrations table.) You shouldn't see any of these operations cause timeouts, but if you do:
+
+* Make sure `idle_session_timeout` is larger than 100 milliseconds — pgmigrate sleeps for 100ms between attempts to acquire its session locks.
+* Please report an issue here explaining which query/statement failed and which timeout caused the failure.
+
 # Acknowledgements
 
 I'd like to thank and acknowledge:
