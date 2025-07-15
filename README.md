@@ -1,6 +1,6 @@
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.3.0/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.3.1/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 pgmigrate is a modern Postgres migrations CLI and golang library. It is
