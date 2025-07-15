@@ -22,14 +22,7 @@ import (
 // This is designed to be an internal helper for testing other database-related
 // packages, and should not be relied upon externally.
 func WithDB(ctx context.Context, driverName string, cb func(*sql.DB) error) (final error) {
-	return WithDBParams(ctx, driverName, "", cb)
-}
-
-// WithDBParams is a helper for writing postgres-backed tests — it's like
-// WithDB, but allows you to pass optional postgres connection string
-// parameters. See [WithDB] for more information.
-func WithDBParams(ctx context.Context, driverName string, addlParams string, cb func(*sql.DB) error) (final error) {
-	db, err := sql.Open(driverName, connectionString("postgres", ""))
+	db, err := sql.Open(driverName, connectionString("postgres"))
 	if err != nil {
 		return fmt.Errorf("withdb(postgres) failed to open: %w", err)
 	}
@@ -48,7 +41,7 @@ func WithDBParams(ctx context.Context, driverName string, addlParams string, cb 
 	if _, err := db.ExecContext(ctx, query); err != nil {
 		return fmt.Errorf("withdb(%s) failed to create: %w", testDBName, err)
 	}
-	testDB, err := sql.Open(driverName, connectionString(testDBName, addlParams))
+	testDB, err := sql.Open(driverName, connectionString(testDBName))
 	if err != nil {
 		return fmt.Errorf("withdb(%s) failed to open: %w", testDBName, err)
 	}
@@ -78,14 +71,6 @@ func randomID(prefix string) (string, error) {
 	return fmt.Sprintf("%s_%s", prefix, suffix), nil
 }
 
-// helper for returning a connection string to a local test database.  the
-// username, password, and port are all hardcoded based on the
-// docker-compose.yml in the root of this repository. This is an internal
-// helper, remember!
-func connectionString(dbname string, addlParams string) string {
-	connstr := fmt.Sprintf("postgres://postgres:password@localhost:5433/%s?sslmode=disable", dbname)
-	if addlParams != "" {
-		connstr += "&" + addlParams
-	}
-	return connstr
+func connectionString(dbname string) string {
+	return fmt.Sprintf("postgres://postgres:password@localhost:5433/%s?sslmode=disable", dbname)
 }

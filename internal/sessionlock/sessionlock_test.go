@@ -88,7 +88,7 @@ func TestWithReturnsUnlockErrors(t *testing.T) {
 func TestWithSucceedsDespiteSessionLockAndStatementTimeouts(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	check.Nil(t, withdb.WithDBParams(ctx, "pgx", "", func(db *sql.DB) error {
+	check.Nil(t, withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		// Make it so that any statement that waits on a lock for 50ms causes
 		// immediate failure.  Similarly, any statement taking 51ms will cause
 		// immediate failure.
