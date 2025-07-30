@@ -116,18 +116,80 @@ FOREIGN KEY (owned_by) REFERENCES schema3.people(name);
 	assert.Nil(t, err)
 }
 
-// Test that when a table has a dependency on an object in a different
-// schema, but that schema is not explicitly mentioned in "things to load",
-// that the dependency is not included in the result.
+// Test that if an object is in a schema that isn't part of the config, it is
+// excluded from the dump. This is true even if it's depended on by an object that
+// _is_ in a schema that is part of the config.
 //
-// Also check the recursive case, where A dep on B dep on C, A and C are
-// included in the config.Schemas, and object from B is not included.
+// In this test:
+//   - ccc.c1 --(depends on)--> bbb.b1
+//   - bbb.b1 --(depends on)--> aaa.a1
 //
-// Or, figure out a way to implement it so that the full chain of objects are
-// included? That's probably the most useful thing to do.
-func TestCrossSchemaConstraints(t *testing.T) {
+// But because we're only dumping objects from "aaa" and "ccc", the final dump
+// will only include the definitions for ccc.c1 and aaa.a1.
+func TestOnlyIncludeObjectsFromSpecifiedSchemas(t *testing.T) {
 	t.Parallel()
-	t.Fatalf("not implemented")
+	config := schema.Config{
+		Schemas: []string{
+			"aaa",
+			// "bbb", // explicitly: DON'T include objects from the "bbb" schema
+			"ccc",
+		},
+	}
+	ctx := context.Background()
+	def := query(`--sql
+CREATE SCHEMA IF NOT EXISTS aaa;
+
+CREATE SCHEMA IF NOT EXISTS bbb;
+
+CREATE SCHEMA IF NOT EXISTS ccc;
+
+CREATE TABLE aaa.a1 (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE bbb.b1 (
+  name text PRIMARY KEY NOT NULL,
+  a1_name text NOT NULL REFERENCES aaa.a1 (name)
+);
+
+CREATE TABLE ccc.c1 (
+  name text PRIMARY KEY NOT NULL,
+  b1_name text NOT NULL REFERENCES bbb.b1 (name)
+);
+	`)
+	// Note that the definition for ccc.c1 still (correctly) carries a foreign
+	// key reference to the bbb.b1 table, but that the definition of bbb.b1 is
+	// missing.
+	dumped := query(`--sql
+CREATE SCHEMA IF NOT EXISTS aaa;
+
+CREATE SCHEMA IF NOT EXISTS ccc;
+
+CREATE TABLE aaa.a1 (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE ccc.c1 (
+  name text PRIMARY KEY NOT NULL,
+  b1_name text NOT NULL
+);
+
+ALTER TABLE ccc.c1
+ADD CONSTRAINT c1_b1_name_fkey
+FOREIGN KEY (b1_name) REFERENCES bbb.b1(name);
+	`)
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.Exec(def); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.Equal(t, dumped, result.String())
+		return nil
+	})
+	assert.Nil(t, err)
 }
 
 // Definitely need to update the schema.Config and the associated
