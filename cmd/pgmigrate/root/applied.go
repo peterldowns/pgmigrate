@@ -10,7 +10,7 @@ import (
 
 var appliedCmd = &cobra.Command{ //nolint:gochecknoglobals
 	Use:     "applied",
-	Aliases: []string{"list"},
+	Aliases: []string{"list", "ls"},
 	Short:   "Show all previously-applied migrations",
 	Long: shared.CLIHelp(`
 Prints the previously-applied migrations in the order that they were applied
