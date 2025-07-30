@@ -64,12 +64,56 @@ CREATE TABLE schema1.table1 (
 	assert.Nil(t, err)
 }
 
-// Everywhere that we do dependency tracking, ordering, sorting, etc. — need to
-// make sure that the sort keys and identifiers respect and include the Schema
-// now.
-func TestSameObjectNameInDifferentSchemas(t *testing.T) {
+// When there are two different tables with the same name, but in different
+// schemas, we correctly distinguish between the two schemas when detecting
+// dependencies.
+func TestCrossSchemaDependencyDifferentiatesBetweenSchemasWhenTableHasSameName(t *testing.T) {
 	t.Parallel()
-	t.Fatalf("not implemented")
+	config := schema.Config{
+		Schemas: []string{
+			"schema1",
+			"schema2",
+			"schema3",
+		},
+	}
+	ctx := context.Background()
+	def := query(`--sql
+CREATE SCHEMA IF NOT EXISTS schema1;
+
+CREATE SCHEMA IF NOT EXISTS schema2;
+
+CREATE SCHEMA IF NOT EXISTS schema3;
+
+CREATE TABLE schema1.cats (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE schema2.cats (
+  name text PRIMARY KEY NOT NULL,
+  owned_by text
+);
+
+CREATE TABLE schema3.people (
+  name text PRIMARY KEY NOT NULL
+);
+
+ALTER TABLE schema2.cats
+ADD CONSTRAINT cats_owned_by_fkey
+FOREIGN KEY (owned_by) REFERENCES schema3.people(name);
+
+	`)
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.Exec(def); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.Equal(t, def, result.String())
+		return nil
+	})
+	assert.Nil(t, err)
 }
 
 // Test that when a table has a dependency on an object in a different
