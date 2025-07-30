@@ -45,9 +45,9 @@ func (e Enum) String() string {
 	return def
 }
 
-func LoadEnums(config Config, db *sql.DB) ([]*Enum, error) {
+func LoadEnums(config DumpConfig, db *sql.DB) ([]*Enum, error) {
 	var enums []*Enum
-	rows, err := db.Query(enumsQuery, config.Schemas)
+	rows, err := db.Query(enumsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

@@ -16,8 +16,8 @@ import (
 // specify the dependency using the dotted schema.table name in the config.
 func TestExplicitCrossSchemaDependency(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{
-		Schemas: []string{
+	config := schema.DumpConfig{
+		SchemaNames: []string{
 			"schema1",
 			"schema2",
 		},
@@ -69,8 +69,8 @@ CREATE TABLE schema1.table1 (
 // dependencies.
 func TestCrossSchemaDependencyDifferentiatesBetweenSchemasWhenTableHasSameName(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{
-		Schemas: []string{
+	config := schema.DumpConfig{
+		SchemaNames: []string{
 			"schema1",
 			"schema2",
 			"schema3",
@@ -128,8 +128,8 @@ FOREIGN KEY (owned_by) REFERENCES schema3.people(name);
 // will only include the definitions for ccc.c1 and aaa.a1.
 func TestOnlyIncludeObjectsFromSpecifiedSchemas(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{
-		Schemas: []string{
+	config := schema.DumpConfig{
+		SchemaNames: []string{
 			"aaa",
 			// "bbb", // explicitly: DON'T include objects from the "bbb" schema
 			"ccc",
@@ -216,8 +216,8 @@ func TestSchemaQuotingInQueries(t *testing.T) {
 
 func TestMultiSchemaRoundtrip(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{
-		Schemas: []string{
+	config := schema.DumpConfig{
+		SchemaNames: []string{
 			"public",
 			"aaa",
 			"bbb",

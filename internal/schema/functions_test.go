@@ -14,7 +14,7 @@ import (
 
 func TestLoadFunctionsWithoutAny(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schemas: []string{"public"}}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		functions, err := schema.LoadFunctions(config, db)
@@ -64,7 +64,7 @@ $function$
 
 func TestLoadFunctionParsesAllAttributes(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schemas: []string{"public"}}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	def := query(`--sql
 
@@ -130,7 +130,7 @@ $function$
 
 func checkFunction(t *testing.T, definition, result string) {
 	t.Helper()
-	config := schema.Config{Schemas: []string{"public"}}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		if _, err := db.ExecContext(ctx, definition); err != nil {

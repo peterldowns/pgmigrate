@@ -64,9 +64,9 @@ func (v View) String() string {
 	return def
 }
 
-func LoadViews(config Config, db *sql.DB) ([]*View, error) {
+func LoadViews(config DumpConfig, db *sql.DB) ([]*View, error) {
 	var views []*View
-	rows, err := db.Query(viewsQuery, config.Schemas)
+	rows, err := db.Query(viewsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

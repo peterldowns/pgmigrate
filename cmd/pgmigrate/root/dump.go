@@ -3,7 +3,6 @@ package root
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -12,8 +11,7 @@ import (
 )
 
 var DumpFlags struct {
-	Out    *string
-	Schema *string
+	Out *string
 }
 
 var dumpCmd = &cobra.Command{
@@ -81,24 +79,20 @@ diff schema.sql another.sql # should show no differences
 		defer db.Close()
 
 		config := shared.State.Config
-		if *DumpFlags.Schema != "" {
-			// TODO: parse a list
-			config.Schema.Schemas = strings.Split(*DumpFlags.Schema, ",")
-		}
-		parsed, err := schema.Parse(config.Schema, db)
+		parsed, err := schema.Parse(config.Dump, db)
 		if err != nil {
 			return err
 		}
 		contents := parsed.String()
 
 		if *DumpFlags.Out != "" {
-			config.Schema.Out = *DumpFlags.Out
+			config.Dump.Out = *DumpFlags.Out
 		}
-		if config.Schema.Out == "" {
-			config.Schema.Out = "-"
+		if config.Dump.Out == "" {
+			config.Dump.Out = "-"
 		}
 
-		fout := config.Schema.Out
+		fout := config.Dump.Out
 		if fout == "-" || fout == "" {
 			fmt.Println(contents)
 		} else {
@@ -115,13 +109,4 @@ diff schema.sql another.sql # should show no differences
 
 func init() {
 	DumpFlags.Out = dumpCmd.Flags().StringP("out", "o", "", "path to write the schema to, '-' means stdout")
-	DumpFlags.Schema = dumpCmd.Flags().StringP(
-		"schema",
-		"s",
-		"",
-		fmt.Sprintf(
-			`the name of the database schema to dump (default "%s")`,
-			schema.DefaultSchema,
-		),
-	)
 }

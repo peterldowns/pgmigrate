@@ -59,9 +59,9 @@ func (t CompoundType) String() string {
 	return out
 }
 
-func LoadCompoundTypes(config Config, db *sql.DB) ([]*CompoundType, error) {
+func LoadCompoundTypes(config DumpConfig, db *sql.DB) ([]*CompoundType, error) {
 	var types []*CompoundType
-	rows, err := db.Query(compoundTypesQuery, config.Schemas)
+	rows, err := db.Query(compoundTypesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

@@ -59,7 +59,7 @@ func TestLoadTriggersWithSameName(t *testing.T) {
 		if _, err := db.ExecContext(ctx, schemaWithTriggers); err != nil {
 			return err
 		}
-		config := schema.Config{Schemas: []string{"public"}}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		_, err := schema.LoadTables(config, db)
 		if err != nil {
 			return err
@@ -79,7 +79,7 @@ func TestLoadTriggersWithSameName(t *testing.T) {
 
 func TestLoadTriggersWithoutAnyTriggers(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schemas: []string{"public"}}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		triggers, err := schema.LoadTriggers(config, db)

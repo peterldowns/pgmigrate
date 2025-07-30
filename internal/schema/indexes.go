@@ -54,9 +54,9 @@ func (i Index) String() string {
 	return fmt.Sprintf("%s;", i.Definition)
 }
 
-func LoadIndexes(config Config, db *sql.DB) ([]*Index, error) {
+func LoadIndexes(config DumpConfig, db *sql.DB) ([]*Index, error) {
 	var indexes []*Index
-	rows, err := db.Query(indexesQuery, config.Schemas)
+	rows, err := db.Query(indexesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

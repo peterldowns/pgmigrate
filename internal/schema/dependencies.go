@@ -14,10 +14,10 @@ type Dependency struct { // TODO: explain not sortable!
 	DependsOn Object
 }
 
-func LoadDependencies(config Config, db *sql.DB) ([]*Dependency, error) {
+func LoadDependencies(config DumpConfig, db *sql.DB) ([]*Dependency, error) {
 	var deps []*Dependency
 
-	rows, err := db.Query(dependenciesQuery, config.Schemas)
+	rows, err := db.Query(dependenciesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

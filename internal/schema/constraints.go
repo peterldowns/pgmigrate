@@ -31,7 +31,7 @@ func (c Constraint) SortKey() string {
 }
 
 func (c *Constraint) DependsOn() []string {
-	deps := append(c.dependencies, c.TableName) //nolint:gocritic // appendAssign
+	deps := append(c.dependencies, pgtools.Identifier(c.Schema, c.TableName)) //nolint:gocritic // appendAssign
 	if c.ForeignTableName != "" {
 		deps = append(deps, pgtools.Identifier(c.ForeignTableSchema, c.ForeignTableName))
 	}
@@ -57,9 +57,9 @@ ADD CONSTRAINT %s
 	)
 }
 
-func LoadConstraints(config Config, db *sql.DB) ([]*Constraint, error) {
+func LoadConstraints(config DumpConfig, db *sql.DB) ([]*Constraint, error) {
 	var constraints []*Constraint
-	rows, err := db.Query(constraintsQuery, config.Schemas)
+	rows, err := db.Query(constraintsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

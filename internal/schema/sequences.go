@@ -86,10 +86,10 @@ func (s Sequence) String() string {
 	return fmt.Sprintf("CREATE SEQUENCE %s;", sName)
 }
 
-func LoadSequences(config Config, db *sql.DB) ([]*Sequence, error) {
+func LoadSequences(config DumpConfig, db *sql.DB) ([]*Sequence, error) {
 	var sequences []*Sequence
 
-	rows, err := db.Query(sequencesQuery, config.Schemas)
+	rows, err := db.Query(sequencesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

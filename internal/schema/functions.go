@@ -38,10 +38,10 @@ func (f Function) String() string {
 	return fmt.Sprintf("%s;", f.Definition)
 }
 
-func LoadFunctions(config Config, db *sql.DB) ([]*Function, error) {
+func LoadFunctions(config DumpConfig, db *sql.DB) ([]*Function, error) {
 	var functions []*Function
 
-	rows, err := db.Query(functionsQuery, config.Schemas)
+	rows, err := db.Query(functionsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

@@ -163,9 +163,9 @@ func (t *Table) columnDef(c *Column, primaryKey bool, unique bool) string { //no
 	return def
 }
 
-func LoadTables(config Config, db *sql.DB) ([]*Table, error) {
+func LoadTables(config DumpConfig, db *sql.DB) ([]*Table, error) {
 	var tables []*Table
-	rows, err := db.Query(tablesQuery, config.Schemas)
+	rows, err := db.Query(tablesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ import (
 func TestLoadConstraintsSucceedsWithEmptyDB(t *testing.T) {
 	t.Parallel()
 	dbtest(t, "", func(db *sql.DB) error {
-		config := schema.Config{Schemas: []string{"public"}}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
@@ -33,7 +33,7 @@ CREATE TABLE cats (
 INSERT INTO cats (name)
 VALUES ('daisy'), ('sunny');
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schemas: []string{"public"}}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
@@ -71,7 +71,7 @@ CREATE TABLE foo (
 	name TEXT NOT NULL
 );
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schemas: []string{"public"}}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
@@ -90,7 +90,7 @@ CREATE TABLE foo (
 
 ALTER TABLE foo ADD CONSTRAINT no_bobs CHECK (name != 'bob');
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schemas: []string{"public"}}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
@@ -124,7 +124,7 @@ ALTER TABLE bar
 ADD CONSTRAINT bar_fkey_another_foo_id
 FOREIGN KEY (another_foo_id) REFERENCES foo (id) NOT VALID;
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schemas: []string{"public"}}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err

@@ -78,7 +78,7 @@ func (d Data) String() string {
 	return out
 }
 
-func LoadData(config Config, db *sql.DB) ([]*Data, error) {
+func LoadData(config DumpConfig, db *sql.DB) ([]*Data, error) {
 	var toLoad []*Data
 	for _, d := range config.Data {
 		if strings.Contains(d.Name, "%") {
@@ -90,7 +90,7 @@ from pg_catalog.pg_class c
 where c.relnamespace::regnamespace::text = ANY($1)
 and c.relkind in ('r', 't', 'p', 'm', 'v')
 and c.relname like $2;
-			`), config.Schemas, d.Name)
+			`), config.SchemaNames, d.Name)
 			if err != nil {
 				return nil, err
 			}

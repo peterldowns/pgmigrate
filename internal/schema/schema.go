@@ -10,9 +10,9 @@ import (
 
 const DefaultSchema = "public"
 
-type Config struct {
+type DumpConfig struct {
 	// The names of the schemas whose contents should be dumped.
-	Schemas []string `yaml:"names"`
+	SchemaNames []string `yaml:"schema_names"`
 	// The name of the file to which the dump should be written.
 	Out string `yaml:"out"`
 	// Any explicit dependencies between database objects.
@@ -36,15 +36,15 @@ type Schema struct {
 	Triggers      []*Trigger
 	Data          []*Data
 	// Metadata that isn't explicitly dumped.
-	Config       Config
+	DumpConfig   DumpConfig
 	Dependencies []*Dependency
 }
 
-func Parse(config Config, db *sql.DB) (*Schema, error) {
-	if len(config.Schemas) == 0 {
-		config.Schemas = []string{DefaultSchema}
+func Parse(config DumpConfig, db *sql.DB) (*Schema, error) {
+	if len(config.SchemaNames) == 0 {
+		config.SchemaNames = []string{DefaultSchema}
 	}
-	schema := Schema{Config: config}
+	schema := Schema{DumpConfig: config}
 	// Load and parse each of the different types of object from the database for each schema.
 	if err := schema.Load(db); err != nil {
 		return nil, fmt.Errorf("load: %w", err)
@@ -194,44 +194,44 @@ func (s *Schema) Sort() {
 // does not assign any additional dependencies between the objects.
 func (s *Schema) Load(db *sql.DB) error {
 	var err error
-	if s.Extensions, err = LoadExtensions(s.Config, db); err != nil {
+	if s.Extensions, err = LoadExtensions(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("extensions: %w", err)
 	}
-	if s.Domains, err = LoadDomains(s.Config, db); err != nil {
+	if s.Domains, err = LoadDomains(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("domains: %w", err)
 	}
-	if s.CompoundTypes, err = LoadCompoundTypes(s.Config, db); err != nil {
+	if s.CompoundTypes, err = LoadCompoundTypes(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("types: %w", err)
 	}
-	if s.Enums, err = LoadEnums(s.Config, db); err != nil {
+	if s.Enums, err = LoadEnums(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("enums: %w", err)
 	}
-	if s.Functions, err = LoadFunctions(s.Config, db); err != nil {
+	if s.Functions, err = LoadFunctions(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("functions: %w", err)
 	}
-	if s.Tables, err = LoadTables(s.Config, db); err != nil {
+	if s.Tables, err = LoadTables(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("tables: %w", err)
 	}
-	if s.Views, err = LoadViews(s.Config, db); err != nil {
+	if s.Views, err = LoadViews(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("views: %w", err)
 	}
-	if s.Sequences, err = LoadSequences(s.Config, db); err != nil {
+	if s.Sequences, err = LoadSequences(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("sequences: %w", err)
 	}
-	if s.Indexes, err = LoadIndexes(s.Config, db); err != nil {
+	if s.Indexes, err = LoadIndexes(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("indexes: %w", err)
 	}
-	if s.Constraints, err = LoadConstraints(s.Config, db); err != nil {
+	if s.Constraints, err = LoadConstraints(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("constraints: %w", err)
 	}
-	if s.Triggers, err = LoadTriggers(s.Config, db); err != nil {
+	if s.Triggers, err = LoadTriggers(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("triggers: %w", err)
 	}
 	// Meta
-	if s.Dependencies, err = LoadDependencies(s.Config, db); err != nil {
+	if s.Dependencies, err = LoadDependencies(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("dependencies: %w", err)
 	}
-	if s.Data, err = LoadData(s.Config, db); err != nil {
+	if s.Data, err = LoadData(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("data: %w", err)
 	}
 	return nil
@@ -330,7 +330,7 @@ func (s *Schema) String() string {
 		out.WriteString(obj.String())
 		out.WriteString("\n\n")
 	}
-	for _, schemaName := range s.Config.Schemas {
+	for _, schemaName := range s.DumpConfig.SchemaNames {
 		out.WriteString(schemaDefinition(schemaName))
 		out.WriteString("\n\n")
 	}

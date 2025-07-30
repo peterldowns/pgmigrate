@@ -47,10 +47,10 @@ func (d Domain) String() string {
 	return def + ";"
 }
 
-func LoadDomains(config Config, db *sql.DB) ([]*Domain, error) {
+func LoadDomains(config DumpConfig, db *sql.DB) ([]*Domain, error) {
 	var domains []*Domain
 	// TOOD: pq.Array necessary?
-	rows, err := db.Query(domainsQuery, config.Schemas)
+	rows, err := db.Query(domainsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

@@ -39,9 +39,9 @@ func (t Trigger) String() string {
 	return t.Definition + ";"
 }
 
-func LoadTriggers(config Config, db *sql.DB) ([]*Trigger, error) {
+func LoadTriggers(config DumpConfig, db *sql.DB) ([]*Trigger, error) {
 	var triggers []*Trigger
-	rows, err := db.Query(triggersQuery, config.Schemas)
+	rows, err := db.Query(triggersQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}

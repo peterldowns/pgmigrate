@@ -33,9 +33,9 @@ func (e Extension) String() string {
 	return def
 }
 
-func LoadExtensions(config Config, db *sql.DB) ([]*Extension, error) {
+func LoadExtensions(config DumpConfig, db *sql.DB) ([]*Extension, error) {
 	var extensions []*Extension
-	rows, err := db.Query(extensionsQuery, config.Schemas)
+	rows, err := db.Query(extensionsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
