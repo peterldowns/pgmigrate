@@ -12,12 +12,56 @@ import (
 	"github.com/peterldowns/pgmigrate/internal/withdb"
 )
 
-// Test that you can manually specify a dependency across schema types, and that
-// it will change the output order of the related objects to respect the
-// dependency.
-func TestCrossSchemaDependency(t *testing.T) {
+// Test that if two tables don't otherwise have a dependency, you can explicitly
+// specify the dependency using the dotted schema.table name in the config.
+func TestExplicitCrossSchemaDependency(t *testing.T) {
 	t.Parallel()
-	t.Fatalf("not implemented")
+	config := schema.Config{
+		Schemas: []string{
+			"schema1",
+			"schema2",
+		},
+		// If this is commented out, the CREATE TABLE
+		// statements are ordered:
+		//
+		// - CREATE TABLE schema1.table1 (...)
+		// - CREATE TABLE schema2.table2 (...)
+		//
+		// because of the default alphabetical sort, and the lack of
+		// relationship between the tables.
+		//
+		// By specifying the dependency, the dumped result will create
+		// schema2.table2 first, and then schema1.table1.
+		Dependencies: map[string][]string{
+			"schema1.table1": {"schema2.table2"},
+		},
+	}
+	ctx := context.Background()
+	def := query(`--sql
+CREATE SCHEMA IF NOT EXISTS schema1;
+
+CREATE SCHEMA IF NOT EXISTS schema2;
+
+CREATE TABLE schema2.table2 (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE schema1.table1 (
+  name text PRIMARY KEY NOT NULL
+);
+	`)
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.Exec(def); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.Equal(t, def, result.String())
+		return nil
+	})
+	assert.Nil(t, err)
 }
 
 // Everywhere that we do dependency tracking, ordering, sorting, etc. — need to
