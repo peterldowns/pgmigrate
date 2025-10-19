@@ -211,7 +211,89 @@ func TestSchemaConfiguration(t *testing.T) {
 // examples of what is valid and what isn't.
 func TestSchemaQuotingInQueries(t *testing.T) {
 	t.Parallel()
-	t.Fatalf("not implemented")
+	config := schema.DumpConfig{
+		SchemaNames: []string{
+			"public",              // no quoting
+			"schema-with-hyphens", // needs quoting
+			"mixedCaseSchema",     // needs quoting
+			"UPPERCASE",           // needs quoting
+			"null",                // needs quoting
+		},
+		Data: []schema.Data{
+			{
+				Schema: "schema-with-hyphens",
+				Name:   "users",
+			},
+			{
+				Schema: "mixedCaseSchema",
+				Name:   "dogs",
+			},
+			{
+				Schema: "UPPERCASE",
+				Name:   "cats",
+			},
+			{
+				Schema: "null",
+				Name:   "fish",
+			},
+		},
+	}
+	ctx := context.Background()
+	def := query(`--sql
+CREATE SCHEMA IF NOT EXISTS public;
+
+CREATE SCHEMA IF NOT EXISTS "schema-with-hyphens";
+
+CREATE SCHEMA IF NOT EXISTS "mixedCaseSchema";
+
+CREATE SCHEMA IF NOT EXISTS "UPPERCASE";
+
+CREATE SCHEMA IF NOT EXISTS "null";
+
+CREATE TABLE "UPPERCASE".cats (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE "mixedCaseSchema".dogs (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE "null".fish (
+  name text PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE "schema-with-hyphens".users (
+  name text PRIMARY KEY NOT NULL
+);
+
+INSERT INTO "UPPERCASE".cats (name) VALUES
+('daisy')
+;
+
+INSERT INTO "mixedCaseSchema".dogs (name) VALUES
+('odie')
+;
+
+INSERT INTO "null".fish (name) VALUES
+('nemo')
+;
+
+INSERT INTO "schema-with-hyphens".users (name) VALUES
+('peter')
+;
+	`)
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.Exec(def); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+		check.Equal(t, def, result.String())
+		return nil
+	})
+	assert.Nil(t, err)
 }
 
 func TestMultiSchemaRoundtrip(t *testing.T) {

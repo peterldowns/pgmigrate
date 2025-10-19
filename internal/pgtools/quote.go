@@ -65,6 +65,7 @@ func Literal(literal string) string {
 // introducing quotes or modifications when:
 //
 //   - the identifier has an upper-case character
+//   - the identifier has a hyphen
 //   - the identifier is a reserved keyword in PostgreSQL, or is non-reserved
 //     but requires quoting in some contexts (when used as a column name, used as
 //     a type name, or used as a function name)
@@ -94,6 +95,9 @@ func requiresQuoting(identifier string) bool {
 		return true
 	}
 	if strings.ContainsRune(lowered, '"') {
+		return true
+	}
+	if strings.ContainsRune(lowered, '-') {
 		return true
 	}
 	return false

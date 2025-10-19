@@ -56,7 +56,8 @@ func (i Index) String() string {
 
 func LoadIndexes(config DumpConfig, db *sql.DB) ([]*Index, error) {
 	var indexes []*Index
-	rows, err := db.Query(indexesQuery, config.SchemaNames)
+	snames := config.SchemaNames
+	rows, err := db.Query(indexesQuery, snames)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ extension_relations as (
 pre as (
 	select
 		i.oid as "oid",
-		n.nspname::regnamespace::text as "schema",
+		n.nspname::text as "schema",
 		c.relname as "table_name",
 		i.relname as "name",
 		pg_get_indexdef(i.oid) as "definition",
@@ -165,7 +166,7 @@ pre as (
 where
     x.indislive
     and c.relkind in ('r', 'm', 'p') AND i.relkind in ('i', 'I')
-	and n.nspname::regnamespace::text = ANY($1)
+	and n.nspname::text = ANY($1)
 	and e.oid is null
 	and er.oid is null
 )

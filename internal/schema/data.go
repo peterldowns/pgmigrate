@@ -84,10 +84,10 @@ func LoadData(config DumpConfig, db *sql.DB) ([]*Data, error) {
 		if strings.Contains(d.Name, "%") {
 			rows, err := db.Query(query(`--sql
 select
-	c.relnamespace::regnamespace::text as schema_name,
+	c.relnamespace::text as schema_name,
 	c.relname as name
 from pg_catalog.pg_class c
-where c.relnamespace::regnamespace::text = ANY($1)
+where c.relnamespace::text = ANY($1)
 and c.relkind in ('r', 't', 'p', 'm', 'v')
 and c.relname like $2;
 			`), config.SchemaNames, d.Name)

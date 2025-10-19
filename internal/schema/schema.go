@@ -21,6 +21,17 @@ type DumpConfig struct {
 	Data []Data `yaml:"data"`
 }
 
+func (dc DumpConfig) QuotedSchemaNames() []string {
+	return dc.SchemaNames
+	/*
+		quoted := make([]string, 0, len(dc.SchemaNames))
+		for _, name := range dc.SchemaNames {
+			quoted = append(quoted, pgtools.Literal(name))
+		}
+		return quoted
+	*/
+}
+
 type Schema struct {
 	// Database objects that can be dumped.
 	Extensions    []*Extension
