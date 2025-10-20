@@ -18,18 +18,9 @@ type DumpConfig struct {
 	// Any explicit dependencies between database objects.
 	Dependencies map[string][]string `yaml:"dependencies"`
 	// Rules for dumping table data in the form of INSERT statements.
-	Data []Data `yaml:"data"`
-}
-
-func (dc DumpConfig) QuotedSchemaNames() []string {
-	return dc.SchemaNames
-	/*
-		quoted := make([]string, 0, len(dc.SchemaNames))
-		for _, name := range dc.SchemaNames {
-			quoted = append(quoted, pgtools.Literal(name))
-		}
-		return quoted
-	*/
+	Data   []Data   `yaml:"data"`
+	Header []string `yaml:"header"`
+	Footer []string `yaml:"footer"`
 }
 
 type Schema struct {
@@ -323,6 +314,10 @@ func (s *Schema) ObjectsByName() map[string]DBObject {
 //     be respected during the dump, to work around faulty dependency detection.
 func (s *Schema) String() string {
 	out := strings.Builder{}
+	for _, header := range s.DumpConfig.Header {
+		out.WriteString(header)
+		out.WriteString("\n\n")
+	}
 
 	// These objects are always emitted first, and are not re-ordered to allow
 	// dependencies. This means that, for instance, a Domain cannot depend on a
@@ -373,6 +368,10 @@ func (s *Schema) String() string {
 	// - Triggers
 	//
 	var sortable []DBObject
+	for _, obj := range s.Functions {
+		obj := obj
+		sortable = append(sortable, obj)
+	}
 	for _, obj := range s.Sequences {
 		obj := obj
 		sortable = append(sortable, obj)
@@ -411,6 +410,11 @@ func (s *Schema) String() string {
 			out.WriteString(obj.String())
 			out.WriteString("\n\n")
 		}
+	}
+
+	for _, footer := range s.DumpConfig.Footer {
+		out.WriteString(footer)
+		out.WriteString("\n\n")
 	}
 
 	return strings.TrimSpace(out.String())
