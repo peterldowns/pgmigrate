@@ -11,9 +11,11 @@ import (
 const DefaultSchema = "public"
 
 type DumpConfig struct {
-	// The names of the schemas whose contents should be dumped.
+	// The names of the postgres schemas to include in the dump, defaults to
+	// "public" if none are specified.
 	SchemaNames []string `yaml:"schema_names"`
-	// The name of the file to which the dump should be written.
+	// The name of the file to which the dump should be written. if `-`, then
+	// the result will be printed to STDOUT.
 	Out string `yaml:"out"`
 	// Any explicit dependencies between database objects, described by their
 	// fully-qualified names e.g., `schema.tablename`.

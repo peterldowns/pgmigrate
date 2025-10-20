@@ -28,35 +28,40 @@ by querying the "users" table, the dump will create the "users" table before it
 creates the "active_users" view.
 
 You can explicitly define dependencies between objects in a configuration file
-if pgmigrate is unable to infer them for you:
+if pgmigrate is unable to infer them for you.
 
     # .pgmigrate.yaml
-    schema:
-      name: "public"
+    dump:
+      schema_names:
+        - public
       dependencies:
-        active_users: # depends on
-          - users
-      data:
-      - name: "%_enum"
+        public.active_users: # this view depends on
+          - public.users     # this table
 
 You can include data from tables as part of the generated dump by creating a
 configuration file. For instance, to include every row in every table that ends
 in "_enum", you can use a configuration like this:
    
     # .pgmigrate.yaml
-    schema:
-      name: "public"
+    dump:
+      schema_names:
+        - public
       data:
-      - name: "%_enum"
+        - name: "%_enum"
 
+For more information on configuring the behavior of the dump command, please see
+the full config documentation at "pgmgirate help config".
 	`),
 	Example: shared.CLIExample(`
 # Apply migrations
 pgmigrate apply
+
 # Dump the resulting schema as a single migration file
 pgmigrate dump --out schema.sql
+
 # Apply the schema to a new database
 psql $ANOTHER_DB -f ./schema.sql
+
 # See that there is no difference between the two schemas
 pgmigrate --database $ANOTHER_DB dump --out another.sql
 diff schema.sql another.sql # should show no differences
