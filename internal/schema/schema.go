@@ -15,11 +15,16 @@ type DumpConfig struct {
 	SchemaNames []string `yaml:"schema_names"`
 	// The name of the file to which the dump should be written.
 	Out string `yaml:"out"`
-	// Any explicit dependencies between database objects.
+	// Any explicit dependencies between database objects, described by their
+	// fully-qualified names e.g., `schema.tablename`.
 	Dependencies map[string][]string `yaml:"dependencies"`
 	// Rules for dumping table data in the form of INSERT statements.
-	Data   []Data   `yaml:"data"`
+	Data []Data `yaml:"data"`
+	// Lines to be written, in order, at the beginning of the generated schema
+	// dump --- before all the dumped DDL.
 	Header []string `yaml:"header"`
+	// Lines to be written, in order, at the end of the generated schema dump
+	// --- after all the dumped DDL.
 	Footer []string `yaml:"footer"`
 }
 
@@ -62,6 +67,7 @@ func Parse(config DumpConfig, db *sql.DB) (*Schema, error) {
 	for name, deps := range config.Dependencies {
 		obj, ok := byName[name]
 		if !ok {
+			// TODO: warn here if the dependency can't be parsed
 			continue
 		}
 		for _, dep := range deps {
@@ -368,10 +374,6 @@ func (s *Schema) String() string {
 	// - Triggers
 	//
 	var sortable []DBObject
-	for _, obj := range s.Functions {
-		obj := obj
-		sortable = append(sortable, obj)
-	}
 	for _, obj := range s.Sequences {
 		obj := obj
 		sortable = append(sortable, obj)

@@ -192,21 +192,6 @@ FOREIGN KEY (b1_name) REFERENCES bbb.b1(name);
 	assert.Nil(t, err)
 }
 
-// Definitely need to update the schema.Config and the associated
-// YAML format. Test loading those configs, appropriately reading
-// the potentially-multiple schemas.
-//
-// Consider: do we want to use fully-qualified table and object names
-// everywhere, instead of the {Schema, Name} split that we've been using?
-// Might make it easier to specify some things?
-//
-// Probably want to keep the split, but change the name of this package
-// to "Parse" or something like that.
-func TestSchemaConfiguration(t *testing.T) {
-	t.Parallel()
-	t.Fatalf("not implemented")
-}
-
 // Make sure that the schema names are all being escaped appropriately, show
 // examples of what is valid and what isn't.
 func TestSchemaQuotingInQueries(t *testing.T) {
