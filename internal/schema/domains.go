@@ -19,7 +19,7 @@ type Domain struct {
 }
 
 func (d Domain) SortKey() string {
-	return d.Name
+	return pgtools.Identifier(d.Schema, d.Name)
 }
 
 func (d Domain) DependsOn() []string {
@@ -47,9 +47,10 @@ func (d Domain) String() string {
 	return def + ";"
 }
 
-func LoadDomains(config Config, db *sql.DB) ([]*Domain, error) {
+func LoadDomains(config DumpConfig, db *sql.DB) ([]*Domain, error) {
 	var domains []*Domain
-	rows, err := db.Query(domainsQuery, config.Schema)
+	// TOOD: pq.Array necessary?
+	rows, err := db.Query(domainsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +108,7 @@ left join pg_catalog.pg_namespace n
 	on n.oid = t.typnamespace
 where
 	t.typtype = 'd'  -- domains
-	and n.nspname = $1
+	and n.nspname = ANY($1)
 	and n.nspname <> 'pg_catalog'
 	and n.nspname <> 'information_schema'
 	and pg_catalog.pg_type_is_visible(t.oid)

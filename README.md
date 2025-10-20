@@ -1,6 +1,6 @@
 # 🐽 pgmigrate
 
-![Latest Version](https://badgers.space/badge/latest%20version/v0.3.1/blueviolet?corner_radius=m)
+![Latest Version](https://badgers.space/badge/latest%20version/v0.4.0/blueviolet?corner_radius=m)
 ![Golang](https://badgers.space/badge/golang/1.18+/blue?corner_radius=m)
 
 pgmigrate is a modern Postgres migrations CLI and golang library. It is
@@ -540,6 +540,85 @@ pgmigrate uses session/advisory locks to make sure that your migrations are only
 
 * Make sure `idle_session_timeout` is larger than 100 milliseconds — pgmigrate sleeps for 100ms between attempts to acquire its session locks.
 * Please report an issue here explaining which query/statement failed and which timeout caused the failure.
+
+## Dealing with complex dependencies between schema objects
+In some databases, the dependencies betwen schema objects can be quite complex.
+For instance, you may have tables that have columns with check constraints that
+use functions that query other tables. In this situation, the SQL emitted by
+`pgmigrate dump` may not be applicable with `psql -f`. You can work around this
+by using the config's `dump.dependencies`, `dump.header`, and `dump.footer`
+options.
+
+### Pgmigrate cannot infer the dependency
+While pgmigrate will infer dependencies between tables/views/etc. where it can,
+in some cases (usually involving column default expressions) pgmigrate simply cannot
+do it. When this happens, the SQL dumped by `pgmigrate dump` will fail to apply to a
+clean database because the objecst are created in the wrong order. You can work around this
+issue by explicitly specifying dependencies in your config file:
+
+```yaml
+dump:
+  schema_names:
+    - public
+    - another_schema
+  # Any explicit dependencies between database objects that are necessary
+  # for the dumped schema to apply successfully. You may need to add these
+  # explicit dependencies in cases where pgmigrate cannot infer them, such
+  # as default column values that depend on functions, or tables that depend
+  # on functions that depend on other tables.
+  #
+  # The names of the dependencies should be given as fully-qualified names
+  # including the schema to which they belong.
+  dependencies:
+    public.some_view: # depends on
+      - public.some_function
+      - another_schema.a_table_name
+    public.some_function: # depends on
+      - public.some_other_table
+```
+
+### Function definitions depend on other objects existing
+pgmigrate always emits the definitions of functions at the beginning of the
+dumped SQL, before the tables, views, etc. If you have functions whose
+definitions depend on other objects, trying to apply the dumped SQL with
+`psql -f ./my-dumped-schema.sql` may fail with errors because those objects don't
+yet exist:
+
+```
+psql:scripts/dump-schema/schema.sql:293: ERROR:  relation "public.lists" does not exist
+LINE 4:     SELECT 1 FROM "public"."lists" WHERE "type" = 'IAB_CONTE...
+                          ^
+QUERY:
+  -- The function body is just the query itself. The result is returned automatically.
+  SELECT EXISTS (
+    SELECT 1 FROM "public"."lists" WHERE "type" = 'IAB_CONTENT_CATEGORY' AND "id" = list_id
+  );
+```  
+
+In this case, you can use the `dump.header` and `dump.footer` config options to:
+
+- wrap the entire dumped SQL in a transaction, and
+- `SET LOCAL check_function_bodies=false;` so that it doesn't matter what order
+functions are defined in.
+
+The config for this looks like:
+
+```yaml
+# .pgmigrate.yaml
+database: "postgres://..."
+dump:
+  header:
+    - |-
+      SET LOCAL check_function_bodies=false;
+  schema_names:
+    - public
+```
+
+Then, when you run `psql -f ./my-dumped-schema.sql`, also pass `-1` to wrap that in a single transaction:
+
+```zsh
+psql -1 -f ./my-dumped-schema.sql`
+```
 
 # Acknowledgements
 

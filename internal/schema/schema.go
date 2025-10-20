@@ -4,19 +4,30 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 const DefaultSchema = "public"
 
-type Config struct {
-	// The name of the schema whose contents should be dumped.
-	Schema string `yaml:"name"`
-	// The name of the file to which the dump should be written.
+type DumpConfig struct {
+	// The names of the postgres schemas to include in the dump, defaults to
+	// "public" if none are specified.
+	SchemaNames []string `yaml:"schema_names"`
+	// The name of the file to which the dump should be written. if `-`, then
+	// the result will be printed to STDOUT.
 	Out string `yaml:"out"`
-	// Any explicit dependencies between database objects.
+	// Any explicit dependencies between database objects, described by their
+	// fully-qualified names e.g., `schema.tablename`.
 	Dependencies map[string][]string `yaml:"dependencies"`
 	// Rules for dumping table data in the form of INSERT statements.
 	Data []Data `yaml:"data"`
+	// Lines to be written, in order, at the beginning of the generated schema
+	// dump --- before all the dumped DDL.
+	Header []string `yaml:"header"`
+	// Lines to be written, in order, at the end of the generated schema dump
+	// --- after all the dumped DDL.
+	Footer []string `yaml:"footer"`
 }
 
 type Schema struct {
@@ -34,29 +45,31 @@ type Schema struct {
 	Triggers      []*Trigger
 	Data          []*Data
 	// Metadata that isn't explicitly dumped.
-	Config       Config
+	DumpConfig   DumpConfig
 	Dependencies []*Dependency
 }
 
-func Parse(config Config, db *sql.DB) (*Schema, error) {
-	if config.Schema == "" {
-		config.Schema = DefaultSchema
+func Parse(config DumpConfig, db *sql.DB) (*Schema, error) {
+	if len(config.SchemaNames) == 0 {
+		config.SchemaNames = []string{DefaultSchema}
 	}
-	schema := Schema{Config: config}
-	// Load and parse each of the different types of object from the database.
+	schema := Schema{DumpConfig: config}
+	// Load and parse each of the different types of object from the database for each schema.
 	if err := schema.Load(db); err != nil {
 		return nil, fmt.Errorf("load: %w", err)
 	}
 	// Assign dependencies between objects.
 	byName := schema.ObjectsByName()
 	for _, dep := range schema.Dependencies {
-		if obj, ok := byName[dep.Object.Name]; ok {
-			obj.AddDependency(dep.DependsOn.Name)
+		objName := pgtools.Identifier(dep.Object.Schema, dep.Object.Name)
+		if obj, ok := byName[objName]; ok {
+			obj.AddDependency(pgtools.Identifier(dep.DependsOn.Schema, dep.DependsOn.Name))
 		}
 	}
 	for name, deps := range config.Dependencies {
 		obj, ok := byName[name]
 		if !ok {
+			// TODO: warn here if the dependency can't be parsed
 			continue
 		}
 		for _, dep := range deps {
@@ -65,11 +78,12 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	}
 
 	// Add indexes to their owning table and remove them from schema.Index.
-	tablesByName := asMap[string](schema.Tables)
-	indexesByName := asMap[string](schema.Indexes)
+	tablesByName := asMap(schema.Tables)
+	indexesByName := asMap(schema.Indexes)
 	indexes := []*Index{}
 	for _, index := range schema.Indexes {
-		if table, ok := tablesByName[index.TableName]; ok {
+		tableName := pgtools.Identifier(index.Schema, index.TableName)
+		if table, ok := tablesByName[tableName]; ok {
 			table.Indexes = append(table.Indexes, index)
 		} else {
 			indexes = append(indexes, index)
@@ -77,17 +91,21 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	}
 	schema.Indexes = indexes
 
-	// Add constraints to their owning table and remove them from
-	// schema.Constraints.
 	constraints := []*Constraint{}
 	for _, con := range schema.Constraints {
+		// Add non-foreign-key constraints to their owning table and remove them from
+		// schema.Constraints, since they can be rendered right after the table definition.
 		if con.ForeignTableName == "" {
-			if table, ok := tablesByName[con.TableName]; ok {
+			tableName := pgtools.Identifier(con.Schema, con.TableName)
+			if table, ok := tablesByName[tableName]; ok {
 				table.Constraints = append(table.Constraints, con)
 				continue
 			}
 		}
-		if _, ok := indexesByName[con.Index]; ok {
+		// If the constraint is an index, we've already handled that in the
+		// Indexes case above so just skip it.
+		indexName := pgtools.Identifier(con.Schema, con.Index)
+		if _, ok := indexesByName[indexName]; ok {
 			continue
 		}
 		constraints = append(constraints, con)
@@ -99,7 +117,8 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	sequences := []*Sequence{}
 	for _, seq := range schema.Sequences {
 		if seq.TableName.Valid {
-			if table, ok := tablesByName[seq.TableName.String]; ok {
+			tableName := pgtools.Identifier(seq.Schema, seq.TableName.String)
+			if table, ok := tablesByName[tableName]; ok {
 				table.Sequences = append(table.Sequences, seq)
 				if seq.ColumnName.Valid {
 					colName := seq.ColumnName.String
@@ -120,13 +139,45 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 	// Add triggers to their owning table and remove them from schema.Triggers.
 	remTriggers := []*Trigger{}
 	for _, trig := range schema.Triggers {
-		if table, ok := tablesByName[trig.TableName]; ok {
+		tableName := pgtools.Identifier(trig.Schema, trig.TableName)
+		if table, ok := tablesByName[tableName]; ok {
 			table.Triggers = append(table.Triggers, trig)
 			continue
 		}
 		remTriggers = append(remTriggers, trig)
 	}
 	schema.Triggers = remTriggers
+
+	// Inserting data can involve inserting foreign keys, which must respect
+	// foreign key constraints at the time of insertion. So, make sure Data
+	// inserts happen in the same order as the tables they're referencing — a
+	// Data object's SortKey() / Identifier is the same as its underlying table
+	// so we can just look up the table's dependencies.
+	for _, data := range schema.Data {
+		tableId := pgtools.Identifier(data.Schema, data.Name)
+		table, ok := tablesByName[tableId]
+		if !ok {
+			continue
+		}
+		data.dependencies = table.DependsOn()
+		for _, constraint := range table.Constraints {
+			if constraint.ForeignTableName != "" {
+				data.AddDependency(pgtools.Identifier(constraint.ForeignTableSchema, constraint.ForeignTableName))
+			}
+		}
+		for _, constraint := range schema.Constraints {
+			constraintTableId := pgtools.Identifier(constraint.Schema, constraint.TableName)
+			if tableId == constraintTableId && constraint.ForeignTableName != "" {
+				data.AddDependency(pgtools.Identifier(constraint.ForeignTableSchema, constraint.ForeignTableName))
+			}
+		}
+
+		// if obj, ok := byName[tableId]; ok {
+		// 	for _, dep := range obj.DependsOn() {
+		// 		data.AddDependency(dep)
+		// 	}
+		// }
+	}
 
 	schema.Sort()
 	return &schema, nil
@@ -135,62 +186,62 @@ func Parse(config Config, db *sql.DB) (*Schema, error) {
 // Sort orders each type of database objects into creation order. Does not
 // perform a global ordering on the different types.
 func (s *Schema) Sort() {
-	s.Extensions = Sort[string](s.Extensions)
-	s.Domains = Sort[string](s.Domains)
-	s.CompoundTypes = Sort[string](s.CompoundTypes)
-	s.Enums = Sort[string](s.Enums)
-	s.Functions = Sort[string](s.Functions)
-	s.Tables = Sort[string](s.Tables)
-	s.Views = Sort[string](s.Views)
-	s.Sequences = Sort[string](s.Sequences)
-	s.Indexes = Sort[string](s.Indexes)
-	s.Constraints = Sort[string](s.Constraints)
-	s.Triggers = Sort[string](s.Triggers)
-	s.Data = Sort[string](s.Data)
+	s.Extensions = Sort(s.Extensions)
+	s.Domains = Sort(s.Domains)
+	s.CompoundTypes = Sort(s.CompoundTypes)
+	s.Enums = Sort(s.Enums)
+	s.Functions = Sort(s.Functions)
+	s.Tables = Sort(s.Tables)
+	s.Views = Sort(s.Views)
+	s.Sequences = Sort(s.Sequences)
+	s.Indexes = Sort(s.Indexes)
+	s.Constraints = Sort(s.Constraints)
+	s.Triggers = Sort(s.Triggers)
+	s.Data = Sort(s.Data)
 }
 
 // Load queries the database and populates the slices of database objects. It
 // does not assign any additional dependencies between the objects.
 func (s *Schema) Load(db *sql.DB) error {
 	var err error
-	if s.Extensions, err = LoadExtensions(s.Config, db); err != nil {
+	if s.Extensions, err = LoadExtensions(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("extensions: %w", err)
 	}
-	if s.Domains, err = LoadDomains(s.Config, db); err != nil {
+	if s.Domains, err = LoadDomains(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("domains: %w", err)
 	}
-	if s.CompoundTypes, err = LoadCompoundTypes(s.Config, db); err != nil {
+	if s.CompoundTypes, err = LoadCompoundTypes(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("types: %w", err)
 	}
-	if s.Enums, err = LoadEnums(s.Config, db); err != nil {
+	if s.Enums, err = LoadEnums(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("enums: %w", err)
 	}
-	if s.Functions, err = LoadFunctions(s.Config, db); err != nil {
+	if s.Functions, err = LoadFunctions(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("functions: %w", err)
 	}
-	if s.Tables, err = LoadTables(s.Config, db); err != nil {
+	if s.Tables, err = LoadTables(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("tables: %w", err)
 	}
-	if s.Views, err = LoadViews(s.Config, db); err != nil {
+	if s.Views, err = LoadViews(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("views: %w", err)
 	}
-	if s.Sequences, err = LoadSequences(s.Config, db); err != nil {
+	if s.Sequences, err = LoadSequences(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("sequences: %w", err)
 	}
-	if s.Indexes, err = LoadIndexes(s.Config, db); err != nil {
+	if s.Indexes, err = LoadIndexes(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("indexes: %w", err)
 	}
-	if s.Constraints, err = LoadConstraints(s.Config, db); err != nil {
+	if s.Constraints, err = LoadConstraints(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("constraints: %w", err)
 	}
-	if s.Triggers, err = LoadTriggers(s.Config, db); err != nil {
+	if s.Triggers, err = LoadTriggers(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("triggers: %w", err)
 	}
 	// Meta
-	if s.Dependencies, err = LoadDependencies(s.Config, db); err != nil {
+	if s.Dependencies, err = LoadDependencies(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("dependencies: %w", err)
 	}
-	if s.Data, err = LoadData(s.Config, db); err != nil {
+	if s.Data, err = LoadData(s.DumpConfig, db); err != nil {
 		return fmt.Errorf("data: %w", err)
 	}
 	return nil
@@ -248,7 +299,7 @@ func (s *Schema) ObjectsByName() map[string]DBObject {
 		objects = append(objects, obj)
 	}
 
-	return asMap[string](objects)
+	return asMap(objects)
 }
 
 // String returns the contents of schema file that can be applied with `psql` to
@@ -271,12 +322,17 @@ func (s *Schema) ObjectsByName() map[string]DBObject {
 //     be respected during the dump, to work around faulty dependency detection.
 func (s *Schema) String() string {
 	out := strings.Builder{}
+	for _, header := range s.DumpConfig.Header {
+		out.WriteString(header)
+		out.WriteString("\n\n")
+	}
 
 	// These objects are always emitted first, and are not re-ordered to allow
 	// dependencies. This means that, for instance, a Domain cannot depend on a
 	// custom Function.
 	//
 	// - Extensions
+	// - Schemas
 	// - Domains
 	// - Enums
 	// - CompoundTypes
@@ -286,6 +342,10 @@ func (s *Schema) String() string {
 	// explicitly say they depend on these.
 	for _, obj := range s.Extensions {
 		out.WriteString(obj.String())
+		out.WriteString("\n\n")
+	}
+	for _, schemaName := range s.DumpConfig.SchemaNames {
+		out.WriteString(schemaDefinition(schemaName))
 		out.WriteString("\n\n")
 	}
 	for _, obj := range s.Domains {
@@ -340,7 +400,7 @@ func (s *Schema) String() string {
 		obj := obj
 		sortable = append(sortable, obj)
 	}
-	sortable = Sort[string](sortable)
+	sortable = Sort(sortable)
 	for _, obj := range sortable {
 		out.WriteString(obj.String())
 		out.WriteString("\n\n")
@@ -356,5 +416,14 @@ func (s *Schema) String() string {
 		}
 	}
 
+	for _, footer := range s.DumpConfig.Footer {
+		out.WriteString(footer)
+		out.WriteString("\n\n")
+	}
+
 	return strings.TrimSpace(out.String())
+}
+
+func schemaDefinition(schemaName string) string {
+	return fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", pgtools.Identifier(schemaName))
 }

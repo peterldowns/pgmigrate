@@ -11,19 +11,24 @@ import (
 )
 
 type Data struct {
-	Schema  string   `yaml:"schema"`
-	Name    string   `yaml:"name"`
-	Columns []string `yaml:"columns"`
-	OrderBy string   `yaml:"orderBy"`
-	Rows    []any
+	Schema       string   `yaml:"schema"`
+	Name         string   `yaml:"name"`
+	Columns      []string `yaml:"columns"`
+	OrderBy      string   `yaml:"orderBy"`
+	rows         []any
+	dependencies []string
 }
 
 func (d Data) SortKey() string {
-	return d.Name
+	return pgtools.Identifier(d.Schema, d.Name)
 }
 
-func (Data) DependsOn() []string {
-	return nil
+func (d *Data) AddDependency(dep string) {
+	d.dependencies = append(d.dependencies, dep)
+}
+
+func (d Data) DependsOn() []string {
+	return d.dependencies
 }
 
 // from pgx: https://github.com/jackc/pgtype/blob/6830cc09847cfe17ae59177e7f81b67312496108/timestamptz.go#L152
@@ -34,14 +39,14 @@ func tsToString(t time.Time) string {
 }
 
 func (d Data) String() string {
-	if len(d.Rows) == 0 || len(d.Columns) == 0 {
+	if len(d.rows) == 0 || len(d.Columns) == 0 {
 		return ""
 	}
 	prelude := fmt.Sprintf("INSERT INTO %s (%s) VALUES\n", pgtools.Identifier(d.Schema, d.Name), strings.Join(d.Columns, ", "))
 	rowLen := len(d.Columns)
 	out := prelude
-	for i := 0; i < len(d.Rows); i += rowLen {
-		rowValues := d.Rows[i : i+rowLen]
+	for i := 0; i < len(d.rows); i += rowLen {
+		rowValues := d.rows[i : i+rowLen]
 		values := make([]string, 0, len(rowValues))
 		for _, val := range rowValues {
 			if val == nil {
@@ -64,7 +69,7 @@ func (d Data) String() string {
 			values = append(values, pgtools.Literal(literal))
 		}
 		out += fmt.Sprintf("(%s)", strings.Join(values, ", "))
-		if i != len(d.Rows)-rowLen {
+		if i != len(d.rows)-rowLen {
 			out += ",\n"
 		} else {
 			out += "\n;"
@@ -73,40 +78,43 @@ func (d Data) String() string {
 	return out
 }
 
-func LoadData(config Config, db *sql.DB) ([]*Data, error) {
+func LoadData(config DumpConfig, db *sql.DB) ([]*Data, error) {
 	var toLoad []*Data
 	for _, d := range config.Data {
 		if strings.Contains(d.Name, "%") {
 			rows, err := db.Query(query(`--sql
-select c.relname as name
+select
+	c.relnamespace::text as schema_name,
+	c.relname as name
 from pg_catalog.pg_class c
-where c.relnamespace::regnamespace::text = $1
+where c.relnamespace::text = ANY($1)
 and c.relkind in ('r', 't', 'p', 'm', 'v')
 and c.relname like $2;
-			`), config.Schema, d.Name)
+			`), config.SchemaNames, d.Name)
 			if err != nil {
 				return nil, err
 			}
 			for rows.Next() {
+				var schemaName string
 				var name string
-				if err := rows.Scan(&name); err != nil {
+				if err := rows.Scan(&schemaName, &name); err != nil {
 					return nil, err
 				}
 				toLoad = append(toLoad, &Data{
-					Schema:  config.Schema,
+					Schema:  schemaName,
 					Name:    name,
 					Columns: d.Columns,
 					OrderBy: d.OrderBy,
-					Rows:    []any{},
+					rows:    []any{},
 				})
 			}
 		} else {
 			toLoad = append(toLoad, &Data{
-				Schema:  config.Schema,
+				Schema:  d.Schema,
 				Name:    d.Name,
 				Columns: d.Columns,
 				OrderBy: d.OrderBy,
-				Rows:    []any{},
+				rows:    []any{},
 			})
 		}
 	}
@@ -118,7 +126,7 @@ and c.relname like $2;
 		q := fmt.Sprintf(query(`--sql
 select %s
 from %s
-		`), cols, pgtools.Identifier(config.Schema, d.Name))
+		`), cols, pgtools.Identifier(d.Schema, d.Name))
 		if d.OrderBy != "" {
 			q += "\norder by " + d.OrderBy
 		}
@@ -160,7 +168,7 @@ from %s
 					ifaces[i] = v.Elem().Interface()
 				}
 			}
-			d.Rows = append(d.Rows, ifaces...)
+			d.rows = append(d.rows, ifaces...)
 		}
 	}
 	return Sort[string](toLoad), nil

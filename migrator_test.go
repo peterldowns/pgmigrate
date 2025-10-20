@@ -406,8 +406,8 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			assert.Equal(t, len(plan), 0)
 
 			// The [DefaultTableName] table was created correctly in the public schema.
-			publicTables, err := schema.LoadTables(schema.Config{
-				Schema: "public",
+			publicTables, err := schema.LoadTables(schema.DumpConfig{
+				SchemaNames: []string{"public"},
 			}, db)
 			assert.Nil(t, err)
 			check.Equal(t, 1, len(publicTables))
@@ -417,8 +417,8 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			// connection, when m2 modified the search_path, the m3 migration
 			// was applied in that context, so the users table ended up in
 			// "another_schema".
-			otherTables, err := schema.LoadTables(schema.Config{
-				Schema: "another_schema",
+			otherTables, err := schema.LoadTables(schema.DumpConfig{
+				SchemaNames: []string{"another_schema"},
 			}, db)
 			assert.Nil(t, err)
 			check.Equal(t, 3, len(otherTables))
@@ -467,16 +467,16 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			check.Equal(t, len(plan), 0)
 
 			// The [DefaultTableName] table was created correctly in the public schema.
-			publicTables, err := schema.LoadTables(schema.Config{
-				Schema: "public",
+			publicTables, err := schema.LoadTables(schema.DumpConfig{
+				SchemaNames: []string{"public"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 1, len(publicTables))
 			check.Equal(t, "pgmigrate_migrations", publicTables[0].Name)
 
 			// m1 and m2 were applied correctly and created their tables in "another_schema".
-			otherTables, err := schema.LoadTables(schema.Config{
-				Schema: "another_schema",
+			otherTables, err := schema.LoadTables(schema.DumpConfig{
+				SchemaNames: []string{"another_schema"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(otherTables))
@@ -526,8 +526,8 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 			// had previously executed m1 and m2, it was executed while the search_path
 			// was still set to the default. This means that it resulted in the table "public"."users",
 			// NOT "another_schema"."users", as in the previous scenario.
-			publicTables, err = schema.LoadTables(schema.Config{
-				Schema: "public",
+			publicTables, err = schema.LoadTables(schema.DumpConfig{
+				SchemaNames: []string{"public"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(publicTables))
@@ -536,8 +536,8 @@ func TestSettingSearchPathInMigrationsDoesntBreak(t *testing.T) {
 
 			// Nothing has changed in "another_schema", it still has the tables
 			// created by m1 and m2.
-			otherTables, err = schema.LoadTables(schema.Config{
-				Schema: "another_schema",
+			otherTables, err = schema.LoadTables(schema.DumpConfig{
+				SchemaNames: []string{"another_schema"},
 			}, db)
 			assert.Nil(t, err)
 			assert.Equal(t, 2, len(otherTables))

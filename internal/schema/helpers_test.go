@@ -13,8 +13,6 @@ func TestIdentifiersDoesntQuote(t *testing.T) {
 	cases := []string{
 		`hello`,
 		`hello_world`,
-		`hello-world`,
-		`1-2-3-4`,
 		`∆_unicode`,
 		`single'quotes'`,
 	}
@@ -29,6 +27,8 @@ func TestIdentifiersQuotes(t *testing.T) {
 		expected string
 		parts    []string
 	}{
+		{`"1-2-3-4"`, []string{`1-2-3-4`}},
+		{`"hello-world"`, []string{`hello-world`}},
 		{`public."hello_WORLD"`, []string{"public", `hello_WORLD`}},
 		{`∆."foo""bar"`, []string{"∆", `foo"bar`}},
 	}

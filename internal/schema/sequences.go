@@ -48,7 +48,7 @@ type Sequence struct {
 }
 
 func (s Sequence) SortKey() string {
-	return s.Name
+	return pgtools.Identifier(s.Schema, s.Name)
 }
 
 func (s Sequence) DependsOn() []string {
@@ -86,10 +86,10 @@ func (s Sequence) String() string {
 	return fmt.Sprintf("CREATE SEQUENCE %s;", sName)
 }
 
-func LoadSequences(config Config, db *sql.DB) ([]*Sequence, error) {
+func LoadSequences(config DumpConfig, db *sql.DB) ([]*Sequence, error) {
 	var sequences []*Sequence
 
-	rows, err := db.Query(sequencesQuery, config.Schema)
+	rows, err := db.Query(sequencesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ with sequences as (
                 AND a.attrelid = d.refobjid )
 	where
 		c.relkind = 'S'
-		and n.nspname = $1
+		and n.nspname = ANY($1)
 )
 select
 	"oid",

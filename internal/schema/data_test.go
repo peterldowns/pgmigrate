@@ -14,7 +14,7 @@ import (
 
 func TestLoadDataEmpty(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		data, err := schema.LoadData(config, db)
@@ -29,10 +29,11 @@ func TestLoadDataEmpty(t *testing.T) {
 
 func TestLoadDataParsesAttrs(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{
-		Schema: "public",
+	config := schema.DumpConfig{
+		SchemaNames: []string{"public"},
 		Data: []schema.Data{
 			{
+				Schema:  "public",
 				Name:    "cats",
 				Columns: []string{"name", "created_at"},
 				OrderBy: "name asc",
@@ -50,7 +51,6 @@ CREATE TABLE cats (
 INSERT INTO cats (name)
 VALUES ('daisy'), ('sunny'), ('kimbop'), ('charlie'), ('sesame');
 ;
-
 	`)
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		if _, err := db.Exec(def); err != nil {

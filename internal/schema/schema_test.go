@@ -57,7 +57,7 @@ func asMap[T schema.Sortable[string]](collections ...[]T) map[string]T {
 func TestParseEmptyDatabase(t *testing.T) {
 	t.Parallel()
 	dbtest(t, "", func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		result, err := schema.Parse(config, db)
 		if err != nil {
 			return err
@@ -71,14 +71,14 @@ func TestParseEmptyDatabase(t *testing.T) {
 		check.NotEqual(t, nil, result.Views)
 		check.NotEqual(t, nil, result.Sequences)
 		check.NotEqual(t, nil, result.Indexes)
-		check.Equal(t, "", result.String())
+		check.Equal(t, "CREATE SCHEMA IF NOT EXISTS public;", result.String())
 		return nil
 	})
 }
 
 func TestParseSimpleExample(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	original := query(`--sql
 CREATE DOMAIN public.score AS double precision
@@ -92,6 +92,8 @@ CREATE EXTENSION "pg_trgm";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE SCHEMA IF NOT EXISTS public;
 
 CREATE DOMAIN public.score AS double precision
 CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
@@ -124,7 +126,7 @@ CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);
 
 func TestParseExampleWithReservedKeywords(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	original := query(`--sql
 create table customorders (
@@ -134,6 +136,8 @@ create table customorders (
 );
 `)
 	expected := query(`--sql
+CREATE SCHEMA IF NOT EXISTS public;
+
 CREATE TABLE public.customorders (
   id bigint PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
   "offset" integer NOT NULL,

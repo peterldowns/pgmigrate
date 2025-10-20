@@ -19,14 +19,14 @@ type Trigger struct {
 }
 
 func (t Trigger) SortKey() string {
-	// Triggers on different tables may have the same name
 	return pgtools.Identifier(t.TableName, t.Name)
 }
 
 func (t Trigger) DependsOn() []string {
-	out := append(t.dependencies, t.TableName) //nolint:gocritic // appendAssign
+	out := t.dependencies
+	out = append(out, pgtools.Identifier(t.Schema, t.TableName))
 	if t.ProcName != "" {
-		out = append(out, t.ProcName)
+		out = append(out, pgtools.Identifier(t.ProcSchema, t.ProcName))
 	}
 	return out
 }
@@ -39,9 +39,9 @@ func (t Trigger) String() string {
 	return t.Definition + ";"
 }
 
-func LoadTriggers(config Config, db *sql.DB) ([]*Trigger, error) {
+func LoadTriggers(config DumpConfig, db *sql.DB) ([]*Trigger, error) {
 	var triggers []*Trigger
-	rows, err := db.Query(triggersQuery, config.Schema)
+	rows, err := db.Query(triggersQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ join pg_proc proc on proc.oid = tg.tgfoid
 left outer join extensions e on tg.oid = e.oid
 where
 	not tg.tgisinternal
-	and cls.relnamespace::regnamespace::text = $1
+	and cls.relnamespace::regnamespace::text = ANY($1)
 	and e.oid is null
 order by
 	"schema",

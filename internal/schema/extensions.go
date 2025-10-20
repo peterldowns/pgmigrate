@@ -17,7 +17,7 @@ type Extension struct {
 }
 
 func (e Extension) SortKey() string {
-	return e.Name
+	return pgtools.Identifier(e.Schema, e.Name)
 }
 
 func (e Extension) DependsOn() []string {
@@ -33,9 +33,9 @@ func (e Extension) String() string {
 	return def
 }
 
-func LoadExtensions(config Config, db *sql.DB) ([]*Extension, error) {
+func LoadExtensions(config DumpConfig, db *sql.DB) ([]*Extension, error) {
 	var extensions []*Extension
-	rows, err := db.Query(extensionsQuery, config.Schema)
+	rows, err := db.Query(extensionsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,6 @@ LEFT JOIN pg_catalog.pg_namespace n
 LEFT JOIN pg_catalog.pg_description c
 	ON c.objoid = e.oid
 	AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-WHERE n.nspname = $1
+WHERE n.nspname = ANY($1)
 ORDER BY 1;
 `)

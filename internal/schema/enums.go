@@ -21,7 +21,7 @@ type Enum struct {
 }
 
 func (e Enum) SortKey() string {
-	return e.Name
+	return pgtools.Identifier(e.Schema, e.Name)
 }
 
 func (e Enum) DependsOn() []string {
@@ -45,9 +45,9 @@ func (e Enum) String() string {
 	return def
 }
 
-func LoadEnums(config Config, db *sql.DB) ([]*Enum, error) {
+func LoadEnums(config DumpConfig, db *sql.DB) ([]*Enum, error) {
 	var enums []*Enum
-	rows, err := db.Query(enumsQuery, config.Schema)
+	rows, err := db.Query(enumsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +98,6 @@ WHERE (t.typrelid = 0 OR (SELECT c.relkind = 'c' FROM pg_catalog.pg_class c WHER
   AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type el WHERE el.oid = t.typelem AND el.typarray = t.oid)
   AND pg_catalog.pg_type_is_visible(t.oid)
   AND t.typcategory = 'E'
-  AND n.nspname = $1
+  AND n.nspname = ANY($1)
 ORDER BY 1, 2;
 `)

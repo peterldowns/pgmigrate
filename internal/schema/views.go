@@ -19,7 +19,7 @@ type View struct {
 }
 
 func (v View) SortKey() string {
-	return v.Name
+	return pgtools.Identifier(v.Schema, v.Name)
 }
 
 func (v View) DependsOn() []string {
@@ -64,9 +64,9 @@ func (v View) String() string {
 	return def
 }
 
-func LoadViews(config Config, db *sql.DB) ([]*View, error) {
+func LoadViews(config DumpConfig, db *sql.DB) ([]*View, error) {
 	var views []*View
-	rows, err := db.Query(viewsQuery, config.Schema)
+	rows, err := db.Query(viewsQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ with r as (
 		inner join pg_catalog.pg_namespace n
 		  ON n.oid = c.relnamespace
 	where c.relkind in ('m', 'v')
-	and n.nspname = $1
+	and n.nspname = ANY($1)
 )
 select
 	r.oid as "view_oid",

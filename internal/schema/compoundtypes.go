@@ -33,7 +33,7 @@ type CompoundType struct {
 }
 
 func (t CompoundType) SortKey() string {
-	return t.Name
+	return pgtools.Identifier(t.Schema, t.Name)
 }
 
 func (t CompoundType) DependsOn() []string {
@@ -59,9 +59,9 @@ func (t CompoundType) String() string {
 	return out
 }
 
-func LoadCompoundTypes(config Config, db *sql.DB) ([]*CompoundType, error) {
+func LoadCompoundTypes(config DumpConfig, db *sql.DB) ([]*CompoundType, error) {
 	var types []*CompoundType
-	rows, err := db.Query(compoundTypesQuery, config.Schema)
+	rows, err := db.Query(compoundTypesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ FROM
   left outer join extensions e on t.oid = e.oid
 WHERE
 	e.oid is null
-	and t.typnamespace::regnamespace::text = $1
+	and t.typnamespace::regnamespace::text = ANY($1)
 	AND pg_catalog.pg_type_is_visible ( t.oid )
 	and t.typcategory = 'C'
 	and (

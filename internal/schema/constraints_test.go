@@ -12,7 +12,7 @@ import (
 func TestLoadConstraintsSucceedsWithEmptyDB(t *testing.T) {
 	t.Parallel()
 	dbtest(t, "", func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
@@ -33,13 +33,13 @@ CREATE TABLE cats (
 INSERT INTO cats (name)
 VALUES ('daisy'), ('sunny');
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
 		}
 		byName := asMap(constraints)
-		if namecheck, ok := byName["cats_name_check"]; check.True(t, ok) {
+		if namecheck, ok := byName["public.cats_name_check"]; check.True(t, ok) {
 			check.Equal(t, "cats", namecheck.TableName)
 			check.Equal(t, query(`--sql
 ALTER TABLE public.cats
@@ -49,7 +49,7 @@ CHECK ((name <> 'garbage'::text));
 				namecheck.String(),
 			)
 		}
-		if pkey, ok := byName["cats_pkey"]; check.True(t, ok) {
+		if pkey, ok := byName["public.cats_pkey"]; check.True(t, ok) {
 			check.Equal(t, "primary_key", pkey.Type)
 			check.Equal(t, "cats", pkey.TableName)
 			check.Equal(t, query(`--sql
@@ -71,7 +71,7 @@ CREATE TABLE foo (
 	name TEXT NOT NULL
 );
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
@@ -90,13 +90,13 @@ CREATE TABLE foo (
 
 ALTER TABLE foo ADD CONSTRAINT no_bobs CHECK (name != 'bob');
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
 		}
 		byName := asMap(constraints)
-		if nobobs, ok := byName["no_bobs"]; check.True(t, ok) {
+		if nobobs, ok := byName["public.no_bobs"]; check.True(t, ok) {
 			check.Equal(t, "check", nobobs.Type)
 			check.Equal(t, query(`--sql
 ALTER TABLE public.foo
@@ -124,14 +124,14 @@ ALTER TABLE bar
 ADD CONSTRAINT bar_fkey_another_foo_id
 FOREIGN KEY (another_foo_id) REFERENCES foo (id) NOT VALID;
 	`), func(db *sql.DB) error {
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		constraints, err := schema.LoadConstraints(config, db)
 		if err != nil {
 			return err
 		}
 		byName := asMap(constraints)
 
-		con, ok := byName["bar_foo_id_fkey"]
+		con, ok := byName["public.bar_foo_id_fkey"]
 		if check.True(t, ok) {
 			check.Equal(t, "foreign_key", con.Type)
 			check.Equal(t, "public", con.Schema)
@@ -143,7 +143,7 @@ FOREIGN KEY (another_foo_id) REFERENCES foo (id) NOT VALID;
 			check.Equal(t, "", con.Index)
 		}
 
-		con, ok = byName["bar_fkey_another_foo_id"]
+		con, ok = byName["public.bar_fkey_another_foo_id"]
 		if check.True(t, ok) {
 			check.Equal(t, "foreign_key", con.Type)
 			check.Equal(t, "public", con.Schema)
@@ -155,7 +155,7 @@ FOREIGN KEY (another_foo_id) REFERENCES foo (id) NOT VALID;
 			check.Equal(t, "", con.Index)
 		}
 
-		con, ok = byName["bar_another_foo_id_key"]
+		con, ok = byName["public.bar_another_foo_id_key"]
 		if check.True(t, ok) {
 			check.Equal(t, "unique", con.Type)
 			check.Equal(t, "public", con.Schema)

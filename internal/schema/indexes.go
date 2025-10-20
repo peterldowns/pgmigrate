@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/lib/pq"
+
+	"github.com/peterldowns/pgmigrate/internal/pgtools"
 )
 
 type Index struct {
@@ -34,13 +36,13 @@ type Index struct {
 }
 
 func (i Index) SortKey() string {
-	return i.Name
+	return pgtools.Identifier(i.Schema, i.Name)
 }
 
 func (i Index) DependsOn() []string {
 	return append(
 		i.dependencies,
-		i.TableName,
+		pgtools.Identifier(i.Schema, i.TableName),
 	)
 }
 
@@ -52,9 +54,10 @@ func (i Index) String() string {
 	return fmt.Sprintf("%s;", i.Definition)
 }
 
-func LoadIndexes(config Config, db *sql.DB) ([]*Index, error) {
+func LoadIndexes(config DumpConfig, db *sql.DB) ([]*Index, error) {
 	var indexes []*Index
-	rows, err := db.Query(indexesQuery, config.Schema)
+	snames := config.SchemaNames
+	rows, err := db.Query(indexesQuery, snames)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +69,7 @@ func LoadIndexes(config Config, db *sql.DB) ([]*Index, error) {
 			&index.TableName,
 			&index.Name,
 			&index.Definition,
-			pq.Array(&index.IndexColumns), // TODO: use pgx types instead?
+			pq.Array(&index.IndexColumns),
 			&index.KeyOptions,
 			&index.TotalColumnCount,
 			&index.KeyColumnCount,
@@ -124,7 +127,7 @@ extension_relations as (
 pre as (
 	select
 		i.oid as "oid",
-		n.nspname::regnamespace::text as "schema",
+		n.nspname::text as "schema",
 		c.relname as "table_name",
 		i.relname as "name",
 		pg_get_indexdef(i.oid) as "definition",
@@ -163,7 +166,7 @@ pre as (
 where
     x.indislive
     and c.relkind in ('r', 'm', 'p') AND i.relkind in ('i', 'I')
-	and n.nspname::regnamespace::text = $1
+	and n.nspname::text = ANY($1)
 	and e.oid is null
 	and er.oid is null
 )

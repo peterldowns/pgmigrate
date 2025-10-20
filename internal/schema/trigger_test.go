@@ -49,7 +49,7 @@ for each row execute function updated_at(); -- FUNCTION
 
 create trigger updated_at
 before update on background_job_settings
-for each row execute function updated_at(); -- FUNCTIOn
+for each row execute function updated_at(); -- FUNCTION
 	`)
 
 func TestLoadTriggersWithSameName(t *testing.T) {
@@ -59,7 +59,7 @@ func TestLoadTriggersWithSameName(t *testing.T) {
 		if _, err := db.ExecContext(ctx, schemaWithTriggers); err != nil {
 			return err
 		}
-		config := schema.Config{Schema: "public"}
+		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		_, err := schema.LoadTables(config, db)
 		if err != nil {
 			return err
@@ -79,14 +79,14 @@ func TestLoadTriggersWithSameName(t *testing.T) {
 
 func TestLoadTriggersWithoutAnyTriggers(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
-		views, err := schema.LoadTriggers(config, db)
+		triggers, err := schema.LoadTriggers(config, db)
 		if err != nil {
 			return err
 		}
-		check.Equal(t, []*schema.Trigger{}, views)
+		check.Equal(t, []*schema.Trigger{}, triggers)
 		return nil
 	})
 	assert.Nil(t, err)

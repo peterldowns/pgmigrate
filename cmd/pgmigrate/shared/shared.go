@@ -25,11 +25,11 @@ type Flags struct {
 	ConfigFile *string // see root.go
 }
 type Config struct {
-	Database   string        `yaml:"database"`
-	Migrations string        `yaml:"migrations"`
-	LogFormat  LogFormat     `yaml:"log_format"`
-	TableName  string        `yaml:"table_name"`
-	Schema     schema.Config `yaml:"schema"`
+	Database   string            `yaml:"database"`
+	Migrations string            `yaml:"migrations"`
+	LogFormat  LogFormat         `yaml:"log_format"`
+	TableName  string            `yaml:"table_name"`
+	Dump       schema.DumpConfig `yaml:"dump"`
 }
 
 type StateT struct {

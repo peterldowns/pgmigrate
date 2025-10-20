@@ -15,7 +15,7 @@ import (
 
 func TestLoadDomainsSucceedsWithoutAnyDomains(t *testing.T) {
 	t.Parallel()
-	config := schema.Config{Schema: "public"}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		domains, err := schema.LoadDomains(config, db)
@@ -58,13 +58,13 @@ NOT NULL;
 func TestDependentDomains(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	config := schema.Config{
-		Schema: "public",
+	config := schema.DumpConfig{
+		SchemaNames: []string{"public"},
 		Dependencies: map[string][]string{
-			"ddd": {"zzz"},
-			"ccc": {"zzz"},
-			"aaa": {"ccc"},
-			"qqq": {"vvv"},
+			"public.ddd": {"public.zzz"},
+			"public.ccc": {"public.zzz"},
+			"public.aaa": {"public.ccc"},
+			"public.qqq": {"public.vvv"},
 		},
 	}
 	definition := query(`--sql
@@ -104,7 +104,7 @@ CREATE DOMAIN public.qqq AS vvv DEFAULT 'qqq'::text;
 
 func checkDomain(t *testing.T, definition, result string) {
 	t.Helper()
-	config := schema.Config{Schema: "public"}
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
 	ctx := context.Background()
 	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
 		if _, err := db.ExecContext(ctx, definition); err != nil {

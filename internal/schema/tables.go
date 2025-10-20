@@ -22,19 +22,19 @@ type Table struct {
 }
 
 func (t Table) SortKey() string {
-	return t.Name
+	return pgtools.Identifier(t.Schema, t.Name)
 }
 
 func (t Table) DependsOn() []string {
 	out := t.Dependencies
 	for _, constraint := range t.Constraints {
 		if constraint.ForeignTableName != "" {
-			out = append(out, constraint.ForeignTableName)
+			out = append(out, pgtools.Identifier(constraint.ForeignTableSchema, constraint.ForeignTableName))
 		}
 	}
 	for _, trig := range t.Triggers {
 		if trig.ProcName != "" {
-			out = append(out, trig.ProcName)
+			out = append(out, pgtools.Identifier(trig.ProcSchema, trig.ProcName))
 		}
 	}
 	return out
@@ -111,13 +111,13 @@ CREATE TABLE %s (
 		if uniqueIndexes[index.SortKey()] {
 			continue
 		}
-		if _, ok := constraintsByName[index.Name]; ok {
+		if _, ok := constraintsByName[index.SortKey()]; ok {
 			continue
 		}
 		tableDef += "\n\n" + index.String()
 	}
 	for _, con := range t.Constraints {
-		if uniqueIndexes[con.Name] {
+		if uniqueIndexes[con.SortKey()] {
 			continue
 		}
 		tableDef += "\n\n" + con.String()
@@ -163,9 +163,9 @@ func (t *Table) columnDef(c *Column, primaryKey bool, unique bool) string { //no
 	return def
 }
 
-func LoadTables(config Config, db *sql.DB) ([]*Table, error) {
+func LoadTables(config DumpConfig, db *sql.DB) ([]*Table, error) {
 	var tables []*Table
-	rows, err := db.Query(tablesQuery, config.Schema)
+	rows, err := db.Query(tablesQuery, config.SchemaNames)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ with r as (
 		inner join pg_catalog.pg_namespace n
 		  ON n.oid = c.relnamespace
 	where c.relkind in ('r', 't', 'p')
-	and n.nspname = $1
+	and n.nspname = ANY($1)
 )
 select
 	r.oid as "table_oid",
@@ -244,7 +244,7 @@ FROM
 		and a.attnum = ad.adnum
 where
 	a.attisdropped is not true
-	  and r.schema = $1
+	  and r.schema = ANY($1)
 order by
 	"table_schema",
 	"table_name",
