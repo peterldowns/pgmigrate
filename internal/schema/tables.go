@@ -58,8 +58,11 @@ func (t Table) String() string {
 				uniqueIndexes[index.SortKey()] = true
 				isPrimaryKey = true
 			}
-			if len(index.IndexColumns) == 1 && index.IndexColumns[0] == c.Name && index.IsUnique {
-				uniqueIndexes[index.SortKey()] = true
+		}
+		// Only mark column as unique if there's an actual UNIQUE constraint
+		// (not just a unique index which may be expression-based)
+		for _, constraint := range t.Constraints {
+			if constraint.Type == "unique" && len(constraint.LocalColumns) == 1 && constraint.LocalColumns[0] == c.Name {
 				isUnique = true
 			}
 		}
