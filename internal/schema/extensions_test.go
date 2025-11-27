@@ -3,6 +3,7 @@ package schema_test
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"testing"
 
 	"github.com/peterldowns/testy/assert"
@@ -30,9 +31,53 @@ func TestLoadExtensionsSucceedsWithoutAnyExtensions(t *testing.T) {
 func TestLoadExtensionRoundtrips(t *testing.T) {
 	t.Parallel()
 	original := "CREATE EXTENSION pgcrypto;"
-	result := `CREATE EXTENSION IF NOT EXISTS pgcrypto;`
+	result := `CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA public;`
 	checkExtension(t, original, result)
 	checkExtension(t, result, result)
+}
+
+func TestLoadExtensionWithSchemaClause(t *testing.T) {
+	t.Parallel()
+	// Test the bug fix: extensions with SCHEMA clause should roundtrip correctly
+	original := "CREATE EXTENSION IF NOT EXISTS unaccent SCHEMA public;"
+	result := `CREATE EXTENSION IF NOT EXISTS unaccent SCHEMA public;`
+	checkExtension(t, original, result)
+}
+
+func TestSchemaOrderingWithExtensions(t *testing.T) {
+	t.Parallel()
+	// Test that schemas come before extensions in the dump
+	config := schema.DumpConfig{SchemaNames: []string{"public"}}
+	ctx := context.Background()
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		if _, err := db.ExecContext(ctx, "CREATE EXTENSION IF NOT EXISTS unaccent SCHEMA public;"); err != nil {
+			return err
+		}
+		result, err := schema.Parse(config, db)
+		if err != nil {
+			return err
+		}
+
+		dump := result.String()
+
+		// Check that "CREATE SCHEMA" appears before "CREATE EXTENSION"
+		schemaPos := strings.Index(dump, "CREATE SCHEMA")
+		extensionPos := strings.Index(dump, "CREATE EXTENSION")
+
+		if schemaPos == -1 {
+			t.Error("Schema definition not found in dump")
+		}
+		if extensionPos == -1 {
+			t.Error("Extension definition not found in dump")
+		}
+		if schemaPos > extensionPos {
+			t.Errorf("Schema should come before extension. Schema at %d, Extension at %d\nDump:\n%s",
+				schemaPos, extensionPos, dump)
+		}
+
+		return nil
+	})
+	assert.Nil(t, err)
 }
 
 func checkExtension(t *testing.T, definition, result string) {

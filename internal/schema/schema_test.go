@@ -89,11 +89,11 @@ CREATE EXTENSION "pg_trgm";
 	`)
 
 	expected := query(`--sql
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE SCHEMA IF NOT EXISTS public;
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA public;
 
 CREATE DOMAIN public.score AS double precision
 CHECK (VALUE >= 0::double precision AND VALUE <= 100::double precision);

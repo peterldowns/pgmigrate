@@ -21,7 +21,10 @@ func (e Extension) SortKey() string {
 }
 
 func (e Extension) DependsOn() []string {
-	return e.dependencies
+	deps := make([]string, len(e.dependencies))
+	copy(deps, e.dependencies)
+	deps = append(deps, pgtools.Identifier(e.Schema))
+	return deps
 }
 
 func (e *Extension) AddDependency(dep string) {
@@ -29,7 +32,9 @@ func (e *Extension) AddDependency(dep string) {
 }
 
 func (e Extension) String() string {
-	def := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s;", pgtools.Identifier(e.Name))
+	def := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s SCHEMA %s;",
+		pgtools.Identifier(e.Name),
+		pgtools.Identifier(e.Schema))
 	return def
 }
 

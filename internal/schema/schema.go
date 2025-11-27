@@ -331,8 +331,8 @@ func (s *Schema) String() string {
 	// dependencies. This means that, for instance, a Domain cannot depend on a
 	// custom Function.
 	//
-	// - Extensions
 	// - Schemas
+	// - Extensions
 	// - Domains
 	// - Enums
 	// - CompoundTypes
@@ -340,12 +340,12 @@ func (s *Schema) String() string {
 	//
 	// The upside is that all the other types of objects don't need to
 	// explicitly say they depend on these.
-	for _, obj := range s.Extensions {
-		out.WriteString(obj.String())
-		out.WriteString("\n\n")
-	}
 	for _, schemaName := range s.DumpConfig.SchemaNames {
 		out.WriteString(schemaDefinition(schemaName))
+		out.WriteString("\n\n")
+	}
+	for _, obj := range s.Extensions {
+		out.WriteString(obj.String())
 		out.WriteString("\n\n")
 	}
 	for _, obj := range s.Domains {
