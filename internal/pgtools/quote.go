@@ -102,3 +102,16 @@ func requiresQuoting(identifier string) bool {
 	}
 	return false
 }
+
+// ParseTableName splits a table name into schema and table parts.
+//
+// If tableName is unqualified (no "."), the schema defaults to "public".
+// If tableName is qualified, everything before the first "." is returned as
+// schema and everything after it is returned as tablename.
+func ParseTableName(tableName string) (schema string, tablename string) {
+	schema, tablename, found := strings.Cut(tableName, ".")
+	if !found {
+		return "public", tableName
+	}
+	return schema, tablename
+}

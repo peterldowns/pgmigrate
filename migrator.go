@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/peterldowns/pgmigrate/internal/multierr"
@@ -142,7 +141,7 @@ func (m *Migrator) Migrate(ctx context.Context, db *sql.DB) ([]VerificationError
 // ensureMigrationsTable will create the migrations table if it does not exist.
 func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error {
 	m.info(ctx, "ensuring migrations table exists", LogField{Key: "table_name", Value: m.TableName})
-	schema, _ := parseTableName(m.TableName)
+	schema, _ := pgtools.ParseTableName(m.TableName)
 	if schema != "" {
 		query := fmt.Sprintf(`CREATE SCHEMA IF NOT EXISTS %s`, pgtools.Identifier(schema))
 		m.debug(ctx, query)
@@ -170,7 +169,7 @@ func (m *Migrator) ensureMigrationsTable(ctx context.Context, db Executor) error
 // hasMigrationsTable returns true if the migrations table exists, false
 // otherwise.
 func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, error) {
-	schema, tablename := parseTableName(m.TableName)
+	schema, tablename := pgtools.ParseTableName(m.TableName)
 	query := fmt.Sprintf(`
 				SELECT EXISTS (
 					SELECT FROM pg_tables
@@ -184,14 +183,6 @@ func (m *Migrator) hasMigrationsTable(ctx context.Context, db Executor) (bool, e
 		return false, fmt.Errorf("hasMigrationsTable: %w", err)
 	}
 	return exists, nil
-}
-
-func parseTableName(tableName string) (schema string, tablename string) {
-	parts := strings.SplitN(tableName, ".", 2)
-	if len(parts) == 1 {
-		return "public", parts[0]
-	}
-	return parts[0], parts[1]
 }
 
 // Plan shows which migrations, if any, would be applied, in the order that they
