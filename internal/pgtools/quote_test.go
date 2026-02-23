@@ -51,3 +51,22 @@ func TestIdentifierGarbageInputs(t *testing.T) {
 	check.Equal(t, `"""schema"""."""tablename"""`, pgtools.Identifier(`"schema"."tablename"`))
 	check.Equal(t, `"""schema"."tablename"""`, pgtools.Identifier(`"schema.tablename"`))
 }
+
+func TestParseTableName(t *testing.T) {
+	t.Parallel()
+	schema, tablename := pgtools.ParseTableName("users")
+	check.Equal(t, "public", schema)
+	check.Equal(t, "users", tablename)
+
+	schema, tablename = pgtools.ParseTableName("custom.users")
+	check.Equal(t, "custom", schema)
+	check.Equal(t, "users", tablename)
+
+	schema, tablename = pgtools.ParseTableName(".users")
+	check.Equal(t, "", schema)
+	check.Equal(t, "users", tablename)
+
+	schema, tablename = pgtools.ParseTableName("a.b.c")
+	check.Equal(t, "a", schema)
+	check.Equal(t, "b.c", tablename)
+}

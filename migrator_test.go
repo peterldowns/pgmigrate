@@ -31,6 +31,36 @@ func TestApplyNoMigrationsSucceeds(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestCreateMigrationsTableInMissingSchema(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	logger := pgmigrate.NewTestLogger(t)
+	err := withdb.WithDB(ctx, "pgx", func(db *sql.DB) error {
+		migrations := []pgmigrate.Migration{
+			{
+				ID:  "0001_initial",
+				SQL: "CREATE TABLE users (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY);",
+			},
+		}
+		migrator := pgmigrate.NewMigrator(migrations)
+		migrator.Logger = logger
+		migrator.TableName = "new_schema.pgmigrate_migrations"
+
+		verrs, err := migrator.Migrate(ctx, db)
+		assert.Nil(t, err)
+		assert.Equal(t, nil, verrs)
+
+		tables, err := schema.LoadTables(schema.DumpConfig{
+			SchemaNames: []string{"new_schema"},
+		}, db)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(tables))
+		check.Equal(t, "pgmigrate_migrations", tables[0].Name)
+		return nil
+	})
+	assert.Nil(t, err)
+}
+
 func TestApplyOneMigrationSucceeds(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
