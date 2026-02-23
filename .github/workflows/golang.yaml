@@ -6,6 +6,8 @@ on:
   pull_request:
 jobs:
   test:
+    env:
+      GOWORK: off
     services:
       postgres:
         image: postgres:17
@@ -41,6 +43,8 @@ jobs:
       - name: test all -race
         run: go test -count=1 -race ./... ./cmd/pgmigrate/...
   lint:
+    env:
+      GOWORK: off
     # https://github.com/golangci/golangci-lint-action?tab=readme-ov-file#annotations
     permissions:
       contents: read # read the repo

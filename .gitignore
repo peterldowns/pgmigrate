@@ -47,7 +47,8 @@ build/
 lib/
 *.a
 
-# golang workspace hashes
+# golang workspace files (local dev only)
+go.work
 go.work.sum
 
 # AI agents
