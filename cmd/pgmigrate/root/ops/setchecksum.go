@@ -61,8 +61,12 @@ pgmigrate ops set-checksum --id 123_example --checksum aaaaaaaaaaaaaaaaaaaaaaaaa
 		defer db.Close()
 		dir := os.DirFS(migrationsDir.Value())
 		slogger, mlogger := shared.State.Logger()
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
 
-		updated, err := pgmigrate.SetChecksums(ctx, db, dir, mlogger, pgmigrate.ChecksumUpdate{
+		updated, err := m.SetChecksums(ctx, db, pgmigrate.ChecksumUpdate{
 			MigrationID: *SetChecksumFlags.ID,
 			NewChecksum: *SetChecksumFlags.Checksum,
 		})

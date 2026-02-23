@@ -60,13 +60,17 @@ pgmigrate ops recalculate-checksum --all
 		defer db.Close()
 		dir := os.DirFS(migrationsDir.Value())
 		slogger, mlogger := shared.State.Logger()
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
 
 		// Execution
 		var updated []pgmigrate.AppliedMigration
 		if *RecalculateChecksumFlags.All {
-			updated, err = pgmigrate.RecalculateAllChecksums(ctx, db, dir, mlogger)
+			updated, err = m.RecalculateAllChecksums(ctx, db)
 		} else {
-			updated, err = pgmigrate.RecalculateChecksums(ctx, db, dir, mlogger, *RecalculateChecksumFlags.IDs...)
+			updated, err = m.RecalculateChecksums(ctx, db, *RecalculateChecksumFlags.IDs...)
 		}
 		if err != nil {
 			return err

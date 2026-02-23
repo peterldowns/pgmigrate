@@ -59,13 +59,17 @@ pgmigrate ops mark-unapplied --all
 		defer db.Close()
 		dir := os.DirFS(migrationsDir.Value())
 		slogger, mlogger := shared.State.Logger()
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
 
 		// Execution
 		var removed []pgmigrate.AppliedMigration
 		if *MarkUnappliedFlags.All {
-			removed, err = pgmigrate.MarkAllUnapplied(ctx, db, dir, mlogger)
+			removed, err = m.MarkAllUnapplied(ctx, db)
 		} else {
-			removed, err = pgmigrate.MarkUnapplied(ctx, db, dir, mlogger, *MarkUnappliedFlags.IDs...)
+			removed, err = m.MarkUnapplied(ctx, db, *MarkUnappliedFlags.IDs...)
 		}
 		if err != nil {
 			return err

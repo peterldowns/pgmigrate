@@ -56,14 +56,18 @@ pgmigrate ops mark-applied --all
 		defer db.Close()
 		dir := os.DirFS(migrationsDir.Value())
 		slogger, mlogger := shared.State.Logger()
+		m, err := newMigrator(dir, shared.State.TableName().Value(), mlogger)
+		if err != nil {
+			return err
+		}
 
 		// Execution
 		var applied []pgmigrate.AppliedMigration
 		if *MarkAppliedFlags.All {
 			slogger.Info("marking ALL as applied")
-			applied, err = pgmigrate.MarkAllApplied(ctx, db, dir, mlogger)
+			applied, err = m.MarkAllApplied(ctx, db)
 		} else {
-			applied, err = pgmigrate.MarkApplied(ctx, db, dir, mlogger, *MarkAppliedFlags.IDs...)
+			applied, err = m.MarkApplied(ctx, db, *MarkAppliedFlags.IDs...)
 		}
 		if err != nil {
 			return err
