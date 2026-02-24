@@ -94,7 +94,6 @@ and c.relname like $2;
 			if err != nil {
 				return nil, err
 			}
-			defer rows.Close()
 			for rows.Next() {
 				var schemaName string
 				var name string
@@ -110,6 +109,9 @@ and c.relname like $2;
 				})
 			}
 			if err := rows.Err(); err != nil {
+				return nil, err
+			}
+			if err := rows.Close(); err != nil {
 				return nil, err
 			}
 		} else {
@@ -138,7 +140,6 @@ from %s
 		if err != nil {
 			return nil, err
 		}
-		defer rows.Close()
 		columnTypeInfo, err := rows.ColumnTypes()
 		if err != nil {
 			return nil, err
@@ -176,6 +177,9 @@ from %s
 			d.rows = append(d.rows, ifaces...)
 		}
 		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		if err := rows.Close(); err != nil {
 			return nil, err
 		}
 	}
