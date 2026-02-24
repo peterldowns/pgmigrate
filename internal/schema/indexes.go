@@ -61,6 +61,7 @@ func LoadIndexes(config DumpConfig, db *sql.DB) ([]*Index, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var index Index
 		if err := rows.Scan(
@@ -91,7 +92,10 @@ func LoadIndexes(config DumpConfig, db *sql.DB) ([]*Index, error) {
 		}
 		indexes = append(indexes, &index)
 	}
-	return Sort[string](indexes), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(indexes), nil
 }
 
 // This query is inspired heavily by:

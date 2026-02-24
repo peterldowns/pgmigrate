@@ -93,6 +93,7 @@ func LoadSequences(config DumpConfig, db *sql.DB) ([]*Sequence, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var sequence Sequence
 		if err := rows.Scan(
@@ -115,7 +116,10 @@ func LoadSequences(config DumpConfig, db *sql.DB) ([]*Sequence, error) {
 		}
 		sequences = append(sequences, &sequence)
 	}
-	return Sort[string](sequences), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(sequences), nil
 }
 
 var sequencesQuery = query(`--sql

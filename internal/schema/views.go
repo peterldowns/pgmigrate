@@ -70,6 +70,7 @@ func LoadViews(config DumpConfig, db *sql.DB) ([]*View, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var current *View
 	for rows.Next() {
 		var view View
@@ -100,7 +101,10 @@ func LoadViews(config DumpConfig, db *sql.DB) ([]*View, error) {
 		}
 		current.Columns = append(current.Columns, column)
 	}
-	return Sort[string](views), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(views), nil
 }
 
 // This query was inspired heavily by:

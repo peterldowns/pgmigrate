@@ -84,7 +84,7 @@ CREATE TABLE %s (
   %s
 );
 	`), pgtools.Identifier(t.Schema, t.Name), strings.Join(colDefs, ",\n  "))
-	constraintsByName := asMap[string](t.Constraints)
+	constraintsByName := asMap(t.Constraints)
 
 	if t.Comment.Valid {
 		tableDef += "\n\n" + fmt.Sprintf(
@@ -169,6 +169,7 @@ func LoadTables(config DumpConfig, db *sql.DB) ([]*Table, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var current *Table
 	for rows.Next() {
 		var table Table
@@ -198,7 +199,10 @@ func LoadTables(config DumpConfig, db *sql.DB) ([]*Table, error) {
 		column.BelongsTo = current.OID
 		current.Columns = append(current.Columns, &column)
 	}
-	return Sort[string](tables), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(tables), nil
 }
 
 // This query is inspired heavily by:

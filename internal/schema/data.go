@@ -108,6 +108,12 @@ and c.relname like $2;
 					rows:    []any{},
 				})
 			}
+			if err := rows.Err(); err != nil {
+				return nil, err
+			}
+			if err := rows.Close(); err != nil {
+				return nil, err
+			}
 		} else {
 			toLoad = append(toLoad, &Data{
 				Schema:  d.Schema,
@@ -170,6 +176,12 @@ from %s
 			}
 			d.rows = append(d.rows, ifaces...)
 		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		if err := rows.Close(); err != nil {
+			return nil, err
+		}
 	}
-	return Sort[string](toLoad), nil
+	return Sort(toLoad), nil
 }

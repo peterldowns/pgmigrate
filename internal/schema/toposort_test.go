@@ -25,7 +25,7 @@ func TestToposortWithCycles(t *testing.T) {
 	f := newSnode("f", "e")
 	z := newSnode("z")
 	initial := []snode{a, b, c, d, e, f, z}
-	nodes := schema.Sort[string](initial)
+	nodes := schema.Sort(initial)
 
 	expected := []snode{z, e, d, c, b, a, f}
 	if !check.Equal(t, asKeys(expected), asKeys(nodes)) {
@@ -47,7 +47,7 @@ func TestInitialOrderIndependent(t *testing.T) {
 		{z, a, x},
 		{z, x, a},
 	} {
-		nodes := schema.Sort[string](initial)
+		nodes := schema.Sort(initial)
 		expected := []snode{z, a, x}
 		if !check.Equal(t, asKeys(expected), asKeys(nodes)) {
 			t.Log(" initial:", initial)
@@ -74,7 +74,7 @@ func TestComplicatedToposort(t *testing.T) {
 	y := newSnode("y", "z")
 	z := newSnode("z")
 	nodes := []snode{a, b, c, d, e, x, y, z}
-	nodes = schema.Sort[string](nodes)
+	nodes = schema.Sort(nodes)
 
 	// depth 3: E
 	// depth 2: C, D
