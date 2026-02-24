@@ -54,6 +54,7 @@ func LoadDomains(config DumpConfig, db *sql.DB) ([]*Domain, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var domain Domain
 		if err := rows.Scan(
@@ -69,7 +70,10 @@ func LoadDomains(config DumpConfig, db *sql.DB) ([]*Domain, error) {
 		}
 		domains = append(domains, &domain)
 	}
-	return Sort[string](domains), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(domains), nil
 }
 
 // This query is inspired heavily by:

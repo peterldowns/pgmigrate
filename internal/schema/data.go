@@ -94,6 +94,7 @@ and c.relname like $2;
 			if err != nil {
 				return nil, err
 			}
+			defer rows.Close()
 			for rows.Next() {
 				var schemaName string
 				var name string
@@ -107,6 +108,9 @@ and c.relname like $2;
 					OrderBy: d.OrderBy,
 					rows:    []any{},
 				})
+			}
+			if err := rows.Err(); err != nil {
+				return nil, err
 			}
 		} else {
 			toLoad = append(toLoad, &Data{
@@ -134,6 +138,7 @@ from %s
 		if err != nil {
 			return nil, err
 		}
+		defer rows.Close()
 		columnTypeInfo, err := rows.ColumnTypes()
 		if err != nil {
 			return nil, err
@@ -170,6 +175,9 @@ from %s
 			}
 			d.rows = append(d.rows, ifaces...)
 		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 	}
-	return Sort[string](toLoad), nil
+	return Sort(toLoad), nil
 }

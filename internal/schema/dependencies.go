@@ -21,6 +21,7 @@ func LoadDependencies(config DumpConfig, db *sql.DB) ([]*Dependency, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var dep Dependency
 		if err := rows.Scan(

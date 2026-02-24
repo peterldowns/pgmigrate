@@ -63,6 +63,7 @@ func LoadConstraints(config DumpConfig, db *sql.DB) ([]*Constraint, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var constraint Constraint
 		if err := rows.Scan(
@@ -84,7 +85,10 @@ func LoadConstraints(config DumpConfig, db *sql.DB) ([]*Constraint, error) {
 		}
 		constraints = append(constraints, &constraint)
 	}
-	return Sort[string](constraints), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(constraints), nil
 }
 
 // This query is inspired heavily by:

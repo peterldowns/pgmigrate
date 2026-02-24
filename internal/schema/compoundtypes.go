@@ -65,6 +65,7 @@ func LoadCompoundTypes(config DumpConfig, db *sql.DB) ([]*CompoundType, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var ct CompoundType
 		if err := rows.Scan(
@@ -77,7 +78,10 @@ func LoadCompoundTypes(config DumpConfig, db *sql.DB) ([]*CompoundType, error) {
 		}
 		types = append(types, &ct)
 	}
-	return Sort[string](types), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(types), nil
 }
 
 // This query is inspired heavily by:

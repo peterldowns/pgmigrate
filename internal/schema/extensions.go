@@ -39,6 +39,7 @@ func LoadExtensions(config DumpConfig, db *sql.DB) ([]*Extension, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var extension Extension
 		if err := rows.Scan(
@@ -52,7 +53,10 @@ func LoadExtensions(config DumpConfig, db *sql.DB) ([]*Extension, error) {
 		}
 		extensions = append(extensions, &extension)
 	}
-	return Sort[string](extensions), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(extensions), nil
 }
 
 // This query is inspired heavily by:

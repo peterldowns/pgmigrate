@@ -45,6 +45,7 @@ func LoadTriggers(config DumpConfig, db *sql.DB) ([]*Trigger, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var trigger Trigger
 		if err := rows.Scan(
@@ -61,7 +62,10 @@ func LoadTriggers(config DumpConfig, db *sql.DB) ([]*Trigger, error) {
 		}
 		triggers = append(triggers, &trigger)
 	}
-	return Sort[string](triggers), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(triggers), nil
 }
 
 // This query is inspired heavily by:

@@ -45,6 +45,7 @@ func LoadFunctions(config DumpConfig, db *sql.DB) ([]*Function, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var function Function
 		if err := rows.Scan(
@@ -64,7 +65,10 @@ func LoadFunctions(config DumpConfig, db *sql.DB) ([]*Function, error) {
 		}
 		functions = append(functions, &function)
 	}
-	return Sort[string](functions), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(functions), nil
 }
 
 // This query is inspired heavily by:

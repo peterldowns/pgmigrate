@@ -51,6 +51,7 @@ func LoadEnums(config DumpConfig, db *sql.DB) ([]*Enum, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var enum Enum
 		if err := rows.Scan(
@@ -66,7 +67,10 @@ func LoadEnums(config DumpConfig, db *sql.DB) ([]*Enum, error) {
 		}
 		enums = append(enums, &enum)
 	}
-	return Sort[string](enums), nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return Sort(enums), nil
 }
 
 // This query is inspired heavily by:
