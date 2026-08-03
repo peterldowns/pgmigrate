@@ -34,15 +34,8 @@ CREATE TABLE public.records (
 CREATE UNIQUE INDEX records_scope_label_idx ON public.records USING btree (scope, lower(label));
 	`)
 
-	dbtest(t, original, func(db *sql.DB) error {
-		config := schema.DumpConfig{SchemaNames: []string{"public"}}
-		result, err := schema.Parse(config, db)
-		if err != nil {
-			return err
-		}
-		check.Equal(t, expected, result.String())
-		return nil
-	})
+	checkSchemaDump(t, original, expected)
+	checkSchemaDump(t, expected, expected)
 }
 
 func TestDumpUniqueConstraintAndExpressionIndexOnSameColumn(t *testing.T) {
@@ -70,15 +63,8 @@ CREATE TABLE public.records (
 CREATE UNIQUE INDEX records_scope_label_idx ON public.records USING btree (scope, lower(label));
 	`)
 
-	dbtest(t, original, func(db *sql.DB) error {
-		config := schema.DumpConfig{SchemaNames: []string{"public"}}
-		result, err := schema.Parse(config, db)
-		if err != nil {
-			return err
-		}
-		check.Equal(t, expected, result.String())
-		return nil
-	})
+	checkSchemaDump(t, original, expected)
+	checkSchemaDump(t, expected, expected)
 }
 
 func TestDumpPartialUniqueIndex(t *testing.T) {
@@ -104,15 +90,8 @@ CREATE TABLE public.records (
 CREATE UNIQUE INDEX current_records_key_idx ON public.records USING btree (key) WHERE (retired_at IS NULL);
 	`)
 
-	dbtest(t, original, func(db *sql.DB) error {
-		config := schema.DumpConfig{SchemaNames: []string{"public"}}
-		result, err := schema.Parse(config, db)
-		if err != nil {
-			return err
-		}
-		check.Equal(t, expected, result.String())
-		return nil
-	})
+	checkSchemaDump(t, original, expected)
+	checkSchemaDump(t, expected, expected)
 }
 
 func TestDumpSingleColumnUniqueConstraint(t *testing.T) {
@@ -132,7 +111,13 @@ CREATE TABLE public.users (
 );
 	`)
 
-	dbtest(t, original, func(db *sql.DB) error {
+	checkSchemaDump(t, original, expected)
+	checkSchemaDump(t, expected, expected)
+}
+
+func checkSchemaDump(t *testing.T, definition, expected string) {
+	t.Helper()
+	dbtest(t, definition, func(db *sql.DB) error {
 		config := schema.DumpConfig{SchemaNames: []string{"public"}}
 		result, err := schema.Parse(config, db)
 		if err != nil {
