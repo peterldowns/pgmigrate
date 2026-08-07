@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 	_ "github.com/lib/pq"
 
 	"github.com/peterldowns/pgmigrate"

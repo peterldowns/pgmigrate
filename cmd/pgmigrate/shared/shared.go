@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 
 	"github.com/peterldowns/pgmigrate"
 	"github.com/peterldowns/pgmigrate/internal/schema"

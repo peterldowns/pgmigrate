@@ -3,7 +3,7 @@ package shared
 import (
 	"context"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 
 	"github.com/peterldowns/pgmigrate"
 )
